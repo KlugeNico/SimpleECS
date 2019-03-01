@@ -2,8 +2,8 @@
 // Created by kreischenderdepp on 26.01.19.
 //
 
-#ifndef SANDBOXWORLD_MANAGER_H
-#define SANDBOXWORLD_MANAGER_H
+#ifndef SIMPLE_ECS_MANAGER_H
+#define SIMPLE_ECS_MANAGER_H
 
 #include <unordered_map>
 #include <vector>
@@ -17,6 +17,7 @@ typedef uint64 Entity_Id;
 typedef uint32 Entity_Version;
 typedef uint32 Entity_Index;
 typedef uint32 Component_Id;
+typedef uint32 System_Id;
 typedef uint32 Setintern_Index;
 typedef std::string Component_Key;
 
@@ -86,15 +87,11 @@ private:
 };
 
 
-class Manager;
-
-
 class EntitySet {
 
 public:
-    EntitySet (Manager* manager, std::vector<Component_Id> componentIds) :
-            manager(manager),
-            mask(Bitset(manager->getMaxEntities())),
+    EntitySet (std::vector<Component_Id> componentIds, uint32 maxComponentAmount) :
+            mask(Bitset(maxComponentAmount)),
             componentIds(componentIds)
     {
         std::sort(componentIds.begin(), componentIds.end());
@@ -127,17 +124,30 @@ public:
         entities.push_back(entityId); // add entityId, because it's not added yet
     }
 
-    Setintern_Index next(Setintern_Index internIndex) {
-        entities[internIndex];
-        return 0;
+    inline Setintern_Index next(Setintern_Index internIndex) {
+        do {
+            if (++internIndex >= entities.size()) {
+                return INVALID; // End of Array
+            }
+        }
+        while (entities[internIndex] == INVALID);
+        return internIndex;
     }
 
-    Entity_Id get(Setintern_Index internIndex) {
+    inline Entity_Id get(Setintern_Index internIndex) {
         return entities[internIndex];
     }
 
+    bool concern(std::vector<Component_Id>* vector) {
+        if (componentIds.size() != vector->size())
+            return false;
+        for (uint32 i = 0; i < componentIds.size(); ++i)
+            if (componentIds[i] != (*vector)[i])
+                return false;
+        return true;
+    }
+
 private:
-    Manager* manager;
     Bitset mask;
     std::vector<Component_Id> componentIds;
 
@@ -152,11 +162,11 @@ private:
 class System {
 
 public:
-    System(EntitySet* entitySet) :
+    explicit System(EntitySet* entitySet) :
             entitySet(entitySet)
     {}
 
-    Entity_Id next() {
+    inline Entity_Id next() {
         iterator = entitySet->next(iterator);
         return entitySet->get(iterator);
     }
@@ -224,16 +234,13 @@ public:
         for (Entity* entity : entities) delete entity;
     }
 
-
     uint32 getMaxEntities() {
         return maxEntities;
     }
 
-
     uint32 getMaxComponents() {
         return maxEntities;
     }
-
 
     Entity_Id createEntity() {
 
@@ -254,7 +261,6 @@ public:
         return ((uint64)version << 32) & index;
     }
 
-
     bool deleteEntity(Entity_Id id) {
 
         Entity_Index index = getIndex(id);
@@ -270,12 +276,10 @@ public:
         return true;
     }
 
-
     template <typename T>
     bool registerComponent(Component_Key componentKey) {
         getSetComponentHandle<T>(componentKey);
     }
-
 
     template <typename T>
     bool addComponent(Entity_Id entityId, T* component) {
@@ -292,7 +296,6 @@ public:
         return true;
     }
 
-
     template <typename T>
     T* getComponent(Entity_Id entityId) {
 
@@ -302,7 +305,6 @@ public:
 
         return reinterpret_cast<T*>(getComponentHandle<T>()->getComponent(index));
     }
-
 
     template <typename T>
     bool deleteComponent(Entity_Id entityId) {
@@ -317,6 +319,43 @@ public:
         return true;
     }
 
+    template <typename ... Ts>
+    System_Id createSystem() {
+        if (sizeof...(Ts) < 1)
+            throw std::invalid_argument("Tried to create System without components!");
+        std::vector<Component_Id> componentIds = std::vector<Component_Id>(sizeof...(Ts));
+        insertComponentIds<Ts...>(&componentIds, 0);
+        std::sort(componentIds.begin(), componentIds.end());
+        EntitySet* entitySet = nullptr;
+        for (EntitySet* set : entitySets) {
+            if (set->concern(&componentIds)) {
+                entitySet = set;
+            }
+        }
+        if (entitySet == nullptr) {
+            entitySet = new EntitySet(componentIds, maxComponents);
+            entitySets.push_back(entitySet);
+        }
+        systems.push_back(new System(entitySet));
+        return static_cast<System_Id>(systems.size() - 1);
+    }
+
+    Entity_Id nextEntity(System_Id systemId) {
+        Entity_Id entityId;
+        Entity_Index entityIndex;
+
+        while (true) {
+            entityId = systems[systemId]->next();
+            if (entityId == INVALID)
+                return INVALID; // End of list
+
+            entityIndex = getIndex(entityId);
+            if (entityIndex == INVALID || !entities[entityIndex]->hasComponents(systems[systemId]))
+                systems[systemId]->remove();    // Remove Entity, because it doesn't exist anymore or lost Components.
+            else
+                return entityId;
+        }
+    }
 
 private:
     uint32 maxEntities;
@@ -330,13 +369,20 @@ private:
     std::unordered_map<Component_Key, ComponentHandle*> componentMap;
     std::vector<ComponentHandle*> componentVector;
 
-    std::vector<EntitySet> entitySets;
-    std::vector<System> systems;
+    std::vector<EntitySet*> entitySets;
+    std::vector<System*> systems;
 
     template <typename T>
     Component_Id getComponentId() {
         static Component_Id id = getComponentHandle<T>()->getComponentId();
         return id;
+    }
+
+    template <typename T, typename ... Ts>
+    void insertComponentIds(std::vector<Component_Id>* ids, uint32 pos) {
+        ids[pos] = getComponentId<T>();
+        if (sizeof...(Ts) > 0)
+            insertComponentIds<Ts...>(ids, ++pos);
     }
 
     template <typename T>
@@ -380,4 +426,4 @@ private:
 };
 
 
-#endif //SANDBOXWORLD_MANAGER_H
+#endif //SIMPLE_ECS_MANAGER_H
