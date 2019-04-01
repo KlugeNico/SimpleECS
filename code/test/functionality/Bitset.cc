@@ -1,11 +1,11 @@
-#include "../ecs/Manager.h"
+#include "../../ecs/Manager.h"
 #include "gtest/gtest.h"
 
 using std::cout;
 using std::endl;
 using std::vector;
 
-uint32 COMPONENT_COUNT = 300;
+uint32 MAX_COMPONENTS = 300;
 
 struct Numbered {
     int id;
@@ -14,7 +14,7 @@ struct Numbered {
 
 TEST (BitsetTest, TestSetBitset) {
 
-    Bitset bitset = Bitset(COMPONENT_COUNT);
+    Bitset bitset = Bitset(MAX_COMPONENTS);
 
     cout << "Set Bitset" << endl;
 
@@ -50,8 +50,8 @@ TEST (BitsetTest, TestSetBitset) {
 
 TEST (BitsetTest, TestBitsetContains) {
 
-    Bitset bitsetOne = Bitset(COMPONENT_COUNT);
-    Bitset bitsetTwo = Bitset(COMPONENT_COUNT);
+    Bitset bitsetOne = Bitset(MAX_COMPONENTS);
+    Bitset bitsetTwo = Bitset(MAX_COMPONENTS);
 
     cout << "Bitset contains Bitset" << endl;
 

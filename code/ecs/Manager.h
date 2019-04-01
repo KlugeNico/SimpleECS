@@ -1,5 +1,5 @@
 //
-// Created by kreischenderdepp on 26.01.19.
+// Created by Nico Kluge on 26.01.19.
 //
 
 #ifndef SIMPLE_ECS_MANAGER_H
@@ -18,7 +18,7 @@ typedef uint32 Entity_Version;
 typedef uint32 Entity_Index;
 typedef uint32 Component_Id;
 typedef uint32 System_Id;
-typedef uint32 Setintern_Index;
+typedef uint32 Intern_Index;
 typedef std::string Component_Key;
 
 static const uint32 INVALID = 0;
@@ -68,21 +68,21 @@ private:
 class Entity {
 
 public:
-    explicit Entity(Entity_Version version, uint32 maxComponentAmount) : version_(version), componentMask_(Bitset(maxComponentAmount)) {}
+    explicit Entity(Entity_Version version, uint32 maxComponentAmount) : version_(version), componentMask(Bitset(maxComponentAmount)) {}
 
     Entity_Version version() const { return version_; }
-    Bitset componentMask() const { return componentMask_; }
+    Bitset* getComponentMask() { return &componentMask; }
 
     bool isInvalid(Entity_Version version) const { return version_ != version; }
 
     void reset() {
         version_++;
-        componentMask_.reset();
+        componentMask.reset();
     }
 
 private:
     Entity_Version version_;
-    Bitset componentMask_;
+    Bitset componentMask;
 
 };
 
@@ -99,8 +99,8 @@ public:
         entities.push_back(INVALID);
     }
 
-    void updateMembership(Entity_Id entityId, Bitset* originally, Bitset* recent) {
-        if (originally->contains(&mask)) {
+    void updateMembership(Entity_Id entityId, Bitset* previous, Bitset* recent) {
+        if (previous->contains(&mask)) {
             if (recent->contains(&mask)) // nothing changed
                 return;
 
@@ -121,10 +121,10 @@ public:
             }
         }
 
-        entities.push_back(entityId); // add entityId, because it's not added yet
+        add(entityId);      // add entityId, because it's not added yet, but should be
     }
 
-    inline Setintern_Index next(Setintern_Index internIndex) {
+    inline Intern_Index next(Intern_Index internIndex) {
         do {
             if (++internIndex >= entities.size()) {
                 return INVALID; // End of Array
@@ -134,8 +134,35 @@ public:
         return internIndex;
     }
 
-    inline Entity_Id get(Setintern_Index internIndex) {
-        return entities[internIndex];
+    inline Entity_Id get(Intern_Index index) {
+        return entities[index];
+    }
+
+    inline Bitset* getMask() {
+        return &mask;
+    }
+
+    void add(Entity_Id entityId) {
+        if (!freeEntityIndices.empty()) {
+            entities[freeEntityIndices.back()];
+            freeEntityIndices.pop_back();
+        }
+        else {
+            entities.push_back(entityId);
+        }
+    }
+
+    inline void remove(Intern_Index index) {
+        std::vector<Entity_Id>::iterator iterator1;
+        for (iterator1 = doomed.begin(); iterator1 != doomed.end(); ++iterator1) {
+            if (*iterator1 == entities[index]) {
+                doomed.erase(iterator1); // the entity is not only doomed anymore, but finally removed.
+                entities[index] = INVALID;
+                freeEntityIndices.push_back(index);
+                return;
+            }
+        }
+        throw std::invalid_argument("Only doomed Indices can be removed!");
     }
 
     bool concern(std::vector<Component_Id>* vector) {
@@ -152,9 +179,9 @@ private:
     std::vector<Component_Id> componentIds;
 
     std::vector<Entity_Id> entities;
-    std::vector<Entity_Id> doomed;
+    std::vector<Entity_Id> doomed;  // We need this List to avoid double insertions
 
-    std::vector<Setintern_Index> freeEntityIndices;
+    std::vector<Intern_Index> freeEntityIndices;
 
 };
 
@@ -171,9 +198,17 @@ public:
         return entitySet->get(iterator);
     }
 
+    inline void remove() {
+        entitySet->remove(iterator);
+    }
+
+    inline bool subserve(Entity* entity) {
+        return entitySet->getMask()->contains(entity->getComponentMask());
+    }
+
 private:
     EntitySet* entitySet;
-    Setintern_Index iterator = 0;
+    Intern_Index iterator = 0;
 
 };
 
@@ -239,7 +274,7 @@ public:
     }
 
     uint32 getMaxComponents() {
-        return maxEntities;
+        return maxComponents;
     }
 
     Entity_Id createEntity() {
@@ -258,12 +293,12 @@ public:
             entities[index] = new Entity(version, maxComponents);
         }
 
-        return ((uint64)version << 32) & index;
+        return (((uint64)version) << 32) | index;
     }
 
-    bool deleteEntity(Entity_Id id) {
+    bool deleteEntity(Entity_Id entityId) {
 
-        Entity_Index index = getIndex(id);
+        Entity_Index index = getIndex(entityId);
         if (index == INVALID)
             return false;
 
@@ -271,13 +306,17 @@ public:
             ComponentHandle* componentHandle = componentVector[i];
             componentHandle->deleteComponent(index);
         }
+        Bitset originally = *entities[index]->getComponentMask();
         entities[index]->reset();
+        updateAllMemberships(entityId, &originally, entities[index]->getComponentMask());
+
+        freeEntityIndices.push_back(index);
 
         return true;
     }
 
     template <typename T>
-    bool registerComponent(Component_Key componentKey) {
+    void registerComponent(Component_Key componentKey) {
         getSetComponentHandle<T>(componentKey);
     }
 
@@ -288,8 +327,11 @@ public:
         if (index == INVALID)
             return false;
 
-        if (!getComponentHandle<T>()->deleteComponent(index))
-            entities[index]->componentMask().set(getComponentId<T>());
+        if (!getComponentHandle<T>()->deleteComponent(index)) {   // Only update if component type is new for entity
+            Bitset originally = *entities[index]->getComponentMask();
+            entities[index]->getComponentMask()->set(getComponentId<T>());
+            updateAllMemberships(entityId, &originally, entities[index]->getComponentMask());
+        }
 
         getComponentHandle<T>()->addComponent(index, reinterpret_cast<void*>(component));
 
@@ -313,18 +355,22 @@ public:
         if (index == INVALID)
             return false;
 
-        if(getComponentHandle<T>()->deleteComponent(index))
-            entities[index]->componentMask().unset(getComponentHandle<T>()->getIndex());
+        if(getComponentHandle<T>()->deleteComponent(index)) {
+            Bitset originally = *entities[index]->getComponentMask();
+            entities[index]->getComponentMask()->unset(getComponentHandle<T>()->getIndex());
+            updateAllMemberships(entityId, &originally, entities[index]->getComponentMask());
+            return true;
+        }
 
-        return true;
+        return false;
     }
 
     template <typename ... Ts>
-    System_Id createSystem() {
+    System_Id createSystem(Ts... ts) {
         if (sizeof...(Ts) < 1)
-            throw std::invalid_argument("Tried to create System without components!");
+            throw std::invalid_argument("System must subserve at least one Component!");
         std::vector<Component_Id> componentIds = std::vector<Component_Id>(sizeof...(Ts));
-        insertComponentIds<Ts...>(&componentIds, 0);
+        insertComponentIds<Ts...>(&componentIds, 0, ts...);
         std::sort(componentIds.begin(), componentIds.end());
         EntitySet* entitySet = nullptr;
         for (EntitySet* set : entitySets) {
@@ -350,7 +396,7 @@ public:
                 return INVALID; // End of list
 
             entityIndex = getIndex(entityId);
-            if (entityIndex == INVALID || !entities[entityIndex]->hasComponents(systems[systemId]))
+            if (entityIndex == INVALID || !systems[systemId]->subserve(entities[entityIndex]))
                 systems[systemId]->remove();    // Remove Entity, because it doesn't exist anymore or lost Components.
             else
                 return entityId;
@@ -378,11 +424,15 @@ private:
         return id;
     }
 
+    template <typename T>
+    void insertComponentIds(std::vector<Component_Id>* ids, uint32 pos, T t) {
+        (*ids)[pos] = getComponentId<T>();
+    }
+
     template <typename T, typename ... Ts>
-    void insertComponentIds(std::vector<Component_Id>* ids, uint32 pos) {
-        ids[pos] = getComponentId<T>();
-        if (sizeof...(Ts) > 0)
-            insertComponentIds<Ts...>(ids, ++pos);
+    void insertComponentIds(std::vector<Component_Id>* ids, uint32 pos, T t, Ts... ts) {
+        (*ids)[pos] = getComponentId<T>();
+        insertComponentIds<Ts...>(ids, ++pos, ts...);
     }
 
     template <typename T>
@@ -392,35 +442,41 @@ private:
     }
 
     template <typename T>
-    ComponentHandle* linkComponentHandle(Component_Key componentKey) {
-        if (componentKey.empty())
+    ComponentHandle* linkComponentHandle(Component_Key* componentKey) {
+        if (componentKey->empty())
             throw std::invalid_argument( "Tried to get unregistered component!");;
-        if (componentMap[componentKey] == nullptr) {
-            ComponentHandle* chp = new ComponentHandle(
+        if (componentMap[*componentKey] == nullptr) {
+            auto* chp = new ComponentHandle(
                     ++lastComponentIndex,
                     [](void* x) { delete reinterpret_cast<T*>(x); },
                     maxEntities );
-            componentMap[componentKey] = chp;
+            componentMap[*componentKey] = chp;
             componentVector[chp->getComponentId()] = chp;
         }
-        ComponentHandle* ch = componentMap[componentKey];
+        ComponentHandle* ch = componentMap[*componentKey];
         return ch;
     }
 
     template <typename T>
     ComponentHandle* getSetComponentHandle(Component_Key componentKey = Component_Key()) {
-        static ComponentHandle* componentHandle = linkComponentHandle<T>(componentKey);
+        static ComponentHandle* componentHandle = linkComponentHandle<T>(&componentKey);
         return componentHandle;
     }
 
     inline Entity_Index getIndex(Entity_Id entityId) {
-        Entity_Index index = static_cast<Entity_Index>(entityId);
+        auto index = static_cast<Entity_Index>(entityId);
         if (index >= entities.size() || index < 1)
             return INVALID;
-        Entity_Version version = static_cast<Entity_Version>(entityId << 32);
+        auto version = static_cast<Entity_Version>(entityId >> 32);
         if (version != entities[index]->version())
             return INVALID;
         return index;
+    }
+
+    void updateAllMemberships(Entity_Id entityId, Bitset* previous, Bitset* recent) {
+        for (EntitySet* set : entitySets) {
+            set->updateMembership(entityId, previous, recent);
+        }
     }
 
 };
