@@ -1,9 +1,11 @@
-#include "../../ecs/Manager.h"
+#include "../../ecs/Core.h"
 #include "gtest/gtest.h"
 
 using std::cout;
 using std::endl;
 using std::vector;
+
+using namespace EcsCore;
 
 uint32 MAX_ENTITIES = 5000;
 uint32 MAX_COMPONENTS_MANAGER = 50;
@@ -33,21 +35,21 @@ TEST (ManagerTest, TestManagerCreate) {
     manager.registerComponent<Position>("p");
     manager.registerComponent<Size>("s");
 
-    System_Id s1 = manager.createSystem (Position(), Size());
-    System_Id s2 = manager.createSystem (Position());
+    SetIterator_Id s1 = manager.createSetIterator(new Position, new Size);
+    SetIterator_Id s2 = manager.createSetIterator(new Position);
 
     for (int i = 0; i < 40; i++) {
         entities[i] = manager.createEntity();
     }
 
     for (int i = 0; i < 20; i++) {
-        ASSERT_TRUE(manager.addComponent<Position>(entities[i], new Position));
+        ASSERT_TRUE(manager.addComponents(entities[i], new Position));
         manager.getComponent<Position>(entities[i])->x = i * 10;
         manager.getComponent<Position>(entities[i])->y = 10;
     }
 
     for (int i = 10; i < 30; i++) {
-        ASSERT_TRUE(manager.addComponent<Size>(entities[i], new Size));
+        ASSERT_TRUE(manager.addComponents(entities[i], new Size));
     }
 
     for (int i = 0; i < 20; i++) {

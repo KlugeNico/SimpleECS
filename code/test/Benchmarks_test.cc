@@ -1,10 +1,12 @@
-#include "../ecs/Manager.h"
+#include "../ecs/Core.h"
 #include "Timer.h"
 #include "gtest/gtest.h"
 
 using std::cout;
 using std::endl;
 using std::vector;
+
+using namespace EcsCore;
 
 uint32 COUNT = 10000000L;
 
@@ -138,7 +140,7 @@ TEST_F(BenchmarkFixture, TestEntityIteration) {
 
     for (int i = 0; i < count; i++) {
         auto e = manager.createEntity();
-        manager.addComponent<Position>(e, new Position());
+        manager.addComponents<Position>(e, new Position());
         entities.push_back(e);
     }
 

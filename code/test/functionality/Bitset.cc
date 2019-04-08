@@ -1,9 +1,12 @@
-#include "../../ecs/Manager.h"
+#include "../../ecs/Core.h"
 #include "gtest/gtest.h"
 
 using std::cout;
 using std::endl;
 using std::vector;
+
+using namespace EcsCore;
+using namespace EcsCoreIntern;
 
 uint32 MAX_COMPONENTS = 300;
 
