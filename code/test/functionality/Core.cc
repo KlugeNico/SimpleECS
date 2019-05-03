@@ -16,7 +16,7 @@ struct Numbered {
 
 struct Position {
     int x = 0;
-    int y = 0;
+    int y_ = 0;
 };
 
 struct Size {
@@ -45,7 +45,7 @@ TEST (ManagerTest, TestManagerCreate) {
     for (int i = 0; i < 20; i++) {
         ASSERT_TRUE(manager.addComponents(entities[i], new Position));
         manager.getComponent<Position>(entities[i])->x = i * 10;
-        manager.getComponent<Position>(entities[i])->y = 10;
+        manager.getComponent<Position>(entities[i])->y_ = 10;
     }
 
     for (int i = 10; i < 30; i++) {
@@ -55,16 +55,16 @@ TEST (ManagerTest, TestManagerCreate) {
     for (int i = 0; i < 20; i++) {
         auto* position = manager.getComponent<Position>(entities[i]);
         ASSERT_EQ(position->x, i * 10);
-        ASSERT_EQ(position->y, 10);
+        ASSERT_EQ(position->y_, 10);
     }
 
     for (int i = 20; i < 40; i++) {
         ASSERT_TRUE(manager.getComponent<Position>(entities[i]) == nullptr);
     }
 
-    manager.deleteEntity(entities[15]);
-    manager.deleteEntity(entities[16]);
-    manager.deleteEntity(entities[17]);
+    manager.eraseEntity(entities[15]);
+    manager.eraseEntity(entities[16]);
+    manager.eraseEntity(entities[17]);
 
     ASSERT_TRUE(manager.getComponent<Position>(entities[14]) != nullptr);
     ASSERT_TRUE(manager.getComponent<Position>(entities[15]) == nullptr);
@@ -77,6 +77,15 @@ TEST (ManagerTest, TestManagerCreate) {
     }
     ASSERT_EQ(amount, 7);
 
+    SetIterator_Id s3 = manager.createSetIterator(new Size);
 
+    manager.addComponent(manager.createEntity(), new Size);
+    manager.addComponent(manager.createEntity(), new Position);
+
+    amount = 0;
+    while (manager.nextEntity(s3) != INVALID) {
+        amount++;
+    }
+    ASSERT_EQ(amount, 18);
 
 }

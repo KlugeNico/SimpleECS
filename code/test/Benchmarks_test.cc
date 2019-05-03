@@ -87,7 +87,7 @@ TEST_F(BenchmarkFixture, TestDestroyEntities) {
   cout << "destroying " << COUNT << " entities" << endl;
 
   for (auto e : entities) {
-    manager.deleteEntity(e);
+      manager.eraseEntity(e);
   }
 }
 

@@ -75,6 +75,8 @@ namespace EcsCore {
 
             Entity_Version version() const { return version_; }
 
+            Entity_Id id(Entity_Index index) const { return (((Entity_Id) version_) << 32u | index); }
+
             Bitset *getComponentMask() { return &componentMask; }
 
             void reset() {
@@ -98,6 +100,11 @@ namespace EcsCore {
                 std::sort(componentIds.begin(), componentIds.end());
                 mask.set(&componentIds);
                 entities.push_back(INVALID);
+            }
+
+            inline void dumbAddIfMember(Entity_Id entityId, Bitset *bitset) {
+                if (bitset->contains(&mask))
+                    add(entityId);
             }
 
             void updateMembership(Entity_Id entityId, Bitset *previous, Bitset *recent) {
@@ -173,6 +180,10 @@ namespace EcsCore {
                 return true;
             }
 
+            uint32 getAmount() {
+                return entities.size() - (doomed.size() + freeEntityIndices.size());
+            }
+
         private:
             Bitset mask;
             std::vector<Component_Id> componentIds;
@@ -201,7 +212,11 @@ namespace EcsCore {
             }
 
             inline bool subserve(Entity *entity) {
-                return entitySet->getMask()->contains(entity->getComponentMask());
+                return entity->getComponentMask()->contains(entitySet->getMask());
+            }
+
+            inline EntitySet* getEntitySet() {
+                return entitySet;
             }
 
         private:
@@ -282,22 +297,23 @@ namespace EcsCore {
         Entity_Id createEntity() {
 
             Entity_Index index;
-            Entity_Version version;
 
             if (!freeEntityIndices.empty()) {
                 index = freeEntityIndices.back();
                 freeEntityIndices.pop_back();
-                version = entities[index]->version();
             } else {
                 index = ++lastEntityIndex;
-                version = 1;
-                entities[index] = new EcsCoreIntern::Entity(version, maxComponents);
+                entities[index] = new EcsCoreIntern::Entity(Entity_Version(1), maxComponents);
             }
 
-            return (((Entity_Id) version) << 32u) | index;
+            return entities[index]->id(index);
         }
 
-        bool deleteEntity(Entity_Id entityId) {
+        bool isValid(Entity_Id entityId) {
+            return getIndex(entityId) != INVALID;
+        }
+
+        bool eraseEntity(Entity_Id entityId) {
 
             Entity_Index index = getIndex(entityId);
             if (index == INVALID)
@@ -319,6 +335,24 @@ namespace EcsCore {
         template<typename T>
         void registerComponent(Component_Key componentKey) {
             getSetComponentHandle<T>(componentKey);
+        }
+
+        template <typename T>
+        bool addComponent(Entity_Id entityId, T* component) {
+
+            Entity_Index index = getIndex(entityId);
+            if (index == INVALID)
+                return false;
+
+            if (!getComponentHandle<T>()->deleteComponent(index)) {   // Only update if component type is new for entity
+                EcsCoreIntern::Bitset originally = *entities[index]->getComponentMask();
+                entities[index]->getComponentMask()->set(getComponentId<T>());
+                updateAllMemberships(entityId, &originally, entities[index]->getComponentMask());
+            }
+
+            getComponentHandle<T>()->addComponent(index, reinterpret_cast<void*>(component));
+
+            return true;
         }
 
         template<typename ... Ts>
@@ -379,22 +413,29 @@ namespace EcsCore {
         }
 
         template<typename ... Ts>
-        SetIterator_Id createSetIterator(Ts *... ts) {      // TODO update Entities
+        SetIterator_Id createSetIterator(Ts *... ts) {
+
             if (sizeof...(Ts) < 1)
                 throw std::invalid_argument("SetIterator must subserve at least one Component!");
+
             std::vector<Component_Id> componentIds = std::vector<Component_Id>(sizeof...(Ts));
             insertComponentIds<Ts...>(&componentIds, ts...);
             std::sort(componentIds.begin(), componentIds.end());
             EcsCoreIntern::EntitySet *entitySet = nullptr;
-            for (EcsCoreIntern::EntitySet *set : entitySets) {
-                if (set->concern(&componentIds)) {
+
+            for (EcsCoreIntern::EntitySet *set : entitySets)
+                if (set->concern(&componentIds))
                     entitySet = set;
-                }
-            }
+
             if (entitySet == nullptr) {
                 entitySet = new EcsCoreIntern::EntitySet(componentIds, maxComponents);
                 entitySets.push_back(entitySet);
+
+                // add all related Entities
+                for (Entity_Index entityIndex = 1; entityIndex <= lastEntityIndex; entityIndex++)
+                    entitySet->dumbAddIfMember(entities[entityIndex]->id(entityIndex), entities[entityIndex]->getComponentMask());
             }
+
             setIterators.push_back(new EcsCoreIntern::SetIterator(entitySet));
             return static_cast<SetIterator_Id>(setIterators.size() - 1);
         }
@@ -414,6 +455,10 @@ namespace EcsCore {
                 else
                     return entityId;
             }
+        }
+
+        uint32 getEntityAmount(SetIterator_Id setIteratorId) {
+            return setIterators[setIteratorId]->getEntitySet()->getAmount();
         }
 
     private:
@@ -498,10 +543,9 @@ namespace EcsCore {
 
         inline Entity_Index getIndex(Entity_Id entityId) {
             auto index = static_cast<Entity_Index>(entityId);
-            if (index >= entities.size() || index < 1)
+            if (index >= entities.size())
                 return INVALID;
-            auto version = static_cast<Entity_Version>(entityId >> Entity_Id(32));
-            if (version != entities[index]->version())
+            if (static_cast<Entity_Version>(entityId >> Entity_Id(32)) != entities[index]->version())
                 return INVALID;
             return index;
         }
