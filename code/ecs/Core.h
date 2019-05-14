@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <forward_list>
 #include <algorithm>
 
 namespace EcsCore {
@@ -94,12 +95,15 @@ namespace EcsCore {
         class EntitySet {
 
         public:
-            EntitySet(std::vector<Component_Id> componentIds, uint32 maxComponentAmount) :
+            EntitySet(std::vector<Component_Id> componentIds, uint32 maxComponentAmount, uint32 maxEntityAmount) :
                     mask(Bitset(maxComponentAmount)),
                     componentIds(componentIds) {
                 std::sort(componentIds.begin(), componentIds.end());
                 mask.set(&componentIds);
                 entities.push_back(INVALID);
+                entities.reserve(maxEntityAmount);
+                internIndices.reserve(maxEntityAmount);
+                freeInternIndices.reserve(maxEntityAmount);
             }
 
             inline void dumbAddIfMember(Entity_Id entityId, Bitset *bitset) {
@@ -107,29 +111,21 @@ namespace EcsCore {
                     add(entityId);
             }
 
-            void updateMembership(Entity_Id entityId, Bitset *previous, Bitset *recent) {
+            void updateMembership(Entity_Index entityIndex, Bitset *previous, Bitset *recent) {
                 if (previous->contains(&mask)) {
                     if (recent->contains(&mask)) // nothing changed
                         return;
 
-                    doomed.push_back(entityId); // doesn't contain entity any more
+                    freeInternIndices.push_back(internIndices[entityIndex]);
+                    entities[internIndices[entityIndex]] = INVALID; // doesn't contain entity any more
+                    internIndices[entityIndex] = INVALID;
                     return;
                 }
 
                 if (!recent->contains(&mask)) // nothing changed
                     return;
 
-                if (!doomed.empty()) {
-                    std::vector<Entity_Id>::iterator iterator1;
-                    for (iterator1 = doomed.begin(); iterator1 != doomed.end(); ++iterator1) {
-                        if (*iterator1 == entityId) {
-                            doomed.erase(iterator1); // entity was prepared to be deleted. But now we want to keep it.
-                            return;
-                        }
-                    }
-                }
-
-                add(entityId);      // add entityId, because it's not added yet, but should be
+                add(entityIndex);      // add entityId, because it's not added yet, but should be
             }
 
             inline Intern_Index next(Intern_Index internIndex) {
@@ -141,34 +137,23 @@ namespace EcsCore {
                 return internIndex;
             }
 
-            inline Entity_Id get(Intern_Index index) {
-                return entities[index];
+            inline Entity_Index getIndex(Intern_Index internIndex) {
+                return entities[internIndex];
             }
 
             inline Bitset *getMask() {
                 return &mask;
             }
 
-            void add(Entity_Id entityId) {
-                if (!freeEntityIndices.empty()) {
-                    entities[freeEntityIndices.back()];
-                    freeEntityIndices.pop_back();
+            void add(Entity_Index entityIndex) {
+                if (!freeInternIndices.empty()) {
+                    internIndices[entityIndex] = freeInternIndices.back();
+                    freeInternIndices.pop_back();
+                    entities[internIndices[entityIndex]] = entityIndex;
                 } else {
-                    entities.push_back(entityId);
+                    entities.push_back(entityIndex);
+                    internIndices[entityIndex] = entities.size() - 1;
                 }
-            }
-
-            inline void remove(Intern_Index index) {
-                std::vector<Entity_Id>::iterator iterator1;
-                for (iterator1 = doomed.begin(); iterator1 != doomed.end(); ++iterator1) {
-                    if (*iterator1 == entities[index]) {
-                        doomed.erase(iterator1); // the entity is not only doomed anymore, but finally removed.
-                        entities[index] = INVALID;
-                        freeEntityIndices.push_back(index);
-                        return;
-                    }
-                }
-                throw std::invalid_argument("Only doomed Indices can be removed!");
             }
 
             bool concern(std::vector<Component_Id> *vector) {
@@ -180,18 +165,18 @@ namespace EcsCore {
                 return true;
             }
 
-            uint32 getAmount() {
-                return entities.size() - (doomed.size() + freeEntityIndices.size());
+            uint32 getVagueAmount() {
+                return entities.size() - freeInternIndices.size();
             }
 
         private:
             Bitset mask;
             std::vector<Component_Id> componentIds;
 
-            std::vector<Entity_Id> entities;
-            std::vector<Entity_Id> doomed;  // We need this List to avoid double insertions
+            std::vector<Entity_Index> entities;
 
-            std::vector<Intern_Index> freeEntityIndices;
+            std::vector<Intern_Index> internIndices;  // We need this List to avoid double insertions
+            std::vector<Intern_Index> freeInternIndices;
 
         };
 
@@ -202,13 +187,9 @@ namespace EcsCore {
             explicit SetIterator(EntitySet *entitySet) :
                     entitySet(entitySet) {}
 
-            inline Entity_Id next() {
+            inline Entity_Index next() {
                 iterator = entitySet->next(iterator);
-                return entitySet->get(iterator);
-            }
-
-            inline void remove() {
-                entitySet->remove(iterator);
+                return entitySet->getIndex(iterator);
             }
 
             inline bool subserve(Entity *entity) {
@@ -277,7 +258,9 @@ namespace EcsCore {
                 maxEntities(maxEntities),
                 maxComponents(maxComponents),
                 componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(maxComponents + 1)),
-                entities(std::vector<EcsCoreIntern::Entity *>(maxEntities + 1)) {}
+                entities(std::vector<EcsCoreIntern::Entity *>(maxEntities + 1)) {
+            entities[0] = new EcsCoreIntern::Entity(0,0);
+        }
 
         ~Manager() {
             for (EcsCoreIntern::ComponentHandle *ch : componentVector) delete ch;
@@ -404,7 +387,7 @@ namespace EcsCore {
 
             if (getComponentHandle<T>()->deleteComponent(index)) {
                 EcsCoreIntern::Bitset originally = *entities[index]->getComponentMask();
-                entities[index]->getComponentMask()->unset(getComponentHandle<T>()->getIndex());
+                entities[index]->getComponentMask()->unset(getComponentHandle<T>()->getComponentId());
                 updateAllMemberships(entityId, &originally, entities[index]->getComponentMask());
                 return true;
             }
@@ -428,7 +411,7 @@ namespace EcsCore {
                     entitySet = set;
 
             if (entitySet == nullptr) {
-                entitySet = new EcsCoreIntern::EntitySet(componentIds, maxComponents);
+                entitySet = new EcsCoreIntern::EntitySet(componentIds, maxComponents, maxEntities);
                 entitySets.push_back(entitySet);
 
                 // add all related Entities
@@ -441,24 +424,23 @@ namespace EcsCore {
         }
 
         Entity_Id nextEntity(SetIterator_Id setIteratorId) {
-            Entity_Id entityId;
-            Entity_Index entityIndex;
-
-            while (true) {
-                entityId = setIterators[setIteratorId]->next();
-                if (entityId == INVALID)
-                    return INVALID; // End of list
-
-                entityIndex = getIndex(entityId);
-                if (entityIndex == INVALID || !setIterators[setIteratorId]->subserve(entities[entityIndex]))
-                    setIterators[setIteratorId]->remove();    // Remove Entity, because it doesn't exist anymore or lost Components.
-                else
-                    return entityId;
-            }
+            Entity_Index nextIndex = setIterators[setIteratorId]->next();
+            return entities[nextIndex]->id(nextIndex);
         }
 
         uint32 getEntityAmount(SetIterator_Id setIteratorId) {
-            return setIterators[setIteratorId]->getEntitySet()->getAmount();
+            return setIterators[setIteratorId]->getEntitySet()->getVagueAmount();
+        }
+
+        template<typename ... Ts>
+        uint32 getEntityAmount(Ts*... ts) {
+            static SetIterator_Id setIteratorId = createSetIterator<Ts...>(ts...);
+            while (nextEntity(setIteratorId) != INVALID);
+            return setIterators[setIteratorId]->getEntitySet()->getVagueAmount();
+        }
+
+        uint32 getEntityAmount() {
+            return lastEntityIndex - freeEntityIndices.size();
         }
 
     private:

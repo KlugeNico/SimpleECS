@@ -38,9 +38,13 @@ TEST (ManagerTest, TestManagerCreate) {
     SetIterator_Id s1 = manager.createSetIterator(new Position, new Size);
     SetIterator_Id s2 = manager.createSetIterator(new Position);
 
+    ASSERT_EQ(manager.getEntityAmount(), 0);
+
     for (int i = 0; i < 40; i++) {
         entities[i] = manager.createEntity();
     }
+
+    ASSERT_EQ(manager.getEntityAmount(), 40);
 
     for (int i = 0; i < 20; i++) {
         ASSERT_TRUE(manager.addComponents(entities[i], new Position));
@@ -66,6 +70,8 @@ TEST (ManagerTest, TestManagerCreate) {
     manager.eraseEntity(entities[16]);
     manager.eraseEntity(entities[17]);
 
+    ASSERT_EQ(manager.getEntityAmount(), 37);
+
     ASSERT_TRUE(manager.getComponent<Position>(entities[14]) != nullptr);
     ASSERT_TRUE(manager.getComponent<Position>(entities[15]) == nullptr);
     ASSERT_TRUE(manager.getComponent<Position>(entities[16]) == nullptr);
@@ -87,5 +93,7 @@ TEST (ManagerTest, TestManagerCreate) {
         amount++;
     }
     ASSERT_EQ(amount, 18);
+
+    ASSERT_EQ(manager.getEntityAmount(), 39);
 
 }

@@ -152,56 +152,70 @@ TEST_F(BenchmarkFixture, TestEntityIteration) {
     }
 }
 
-/*
 TEST_F(BenchmarkFixture, TestEntityIterationUnpackTwo) {
-  int count = COUNT;
-  for (int i = 0; i < count; i++) {
-    auto e = em.create();
-    e.assign<Position>();
-    e.assign<Direction>();
-  }
+    int count = COUNT;
+    manager.registerComponent<Position>(Component_Key("Position"));
+    manager.registerComponent<Direction>(Component_Key("Direction"));
+    vector<uint64> entities;
 
-  AutoTimer t;
-  cout << "iterating over " << count << " entities, unpacking two components" << endl;
+    for (int i = 0; i < count; i++) {
+        auto e = manager.createEntity();
+        manager.addComponents<Position>(e, new Position());
+        manager.addComponents<Direction>(e, new Direction());
+        entities.push_back(e);
+    }
 
-  ComponentHandle<Position> position;
-  ComponentHandle<Direction> direction;
-  for (auto e : em.entities_with_components(position, direction)) {
-    (void)e;
-  }
+    AutoTimer t;
+    cout << "iterating over " << count << " entities, unpacking two components" << endl;
+
+    for (auto e : entities) {
+        manager.getComponent<Position>(e);
+        manager.getComponent<Direction>(e);
+    }
 }
 
 TEST_F(BenchmarkFixture, TestEntityIterationUnpackTen) {
     int count = COUNT;
+    manager.registerComponent<Position>(Component_Key("Position"));
+    manager.registerComponent<Direction>(Component_Key("Direction"));
+    manager.registerComponent<C3>(Component_Key("c3"));
+    manager.registerComponent<C4>(Component_Key("c4"));
+    manager.registerComponent<C5>(Component_Key("c5"));
+    manager.registerComponent<C6>(Component_Key("c6"));
+    manager.registerComponent<C7>(Component_Key("c7"));
+    manager.registerComponent<C8>(Component_Key("c8"));
+    manager.registerComponent<C9>(Component_Key("c9"));
+    manager.registerComponent<C10>(Component_Key("c10"));
+    vector<uint64> entities;
+
     for (int i = 0; i < count; i++) {
-        auto e = em.create();
-        e.assign<Position>();
-        e.assign<Direction>();
-        e.assign<C3>();
-        e.assign<C4>();
-        e.assign<C5>();
-        e.assign<C6>();
-        e.assign<C7>();
-        e.assign<C8>();
-        e.assign<C9>();
-        e.assign<C10>();
+        auto e = manager.createEntity();
+        manager.addComponents<Position>(e, new Position());
+        manager.addComponents<Direction>(e, new Direction());
+        manager.addComponents(e, new C3());
+        manager.addComponents(e, new C4());
+        manager.addComponents(e, new C5());
+        manager.addComponents(e, new C6());
+        manager.addComponents(e, new C7());
+        manager.addComponents(e, new C8());
+        manager.addComponents(e, new C9());
+        manager.addComponents(e, new C10());
+        entities.push_back(e);
     }
 
     AutoTimer t;
-    cout << "iterating over " << count << " entities, unpacking ten components" << endl;
+    cout << "iterating over " << count << " entities, unpacking two components" << endl;
 
-    ComponentHandle<Position> position;
-    ComponentHandle<Direction> direction;
-    ComponentHandle<C3> C3;
-    ComponentHandle<C4> C4;
-    ComponentHandle<C5> C5;
-    ComponentHandle<C6> C6;
-    ComponentHandle<C7> C7;
-    ComponentHandle<C8> C8;
-    ComponentHandle<C9> C9;
-    ComponentHandle<C10> C10;
-    for (auto e : em.entities_with_components(position, direction, C3, C4, C5, C6, C7, C8, C9, C10)) {
-        (void)e;
+    for (auto e : entities) {
+        manager.getComponent<Position>(e);
+        manager.getComponent<Direction>(e);
+        manager.getComponent<C3>(e);
+        manager.getComponent<C4>(e);
+        manager.getComponent<C5>(e);
+        manager.getComponent<C6>(e);
+        manager.getComponent<C7>(e);
+        manager.getComponent<C8>(e);
+        manager.getComponent<C9>(e);
+        manager.getComponent<C10>(e);
     }
 }
-    */

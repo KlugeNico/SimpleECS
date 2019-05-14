@@ -1,23 +1,28 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include <iostream>
 #include <cmath>
 #include <random>
 #include <forward_list>
+#include <climits>
+#include <zconf.h>
+#include <sstream>
 #include "../../ecs/RealTimeEcs.h"
 
 using EcsCore::Entity_Id;
 
+static const int WORLD_SPAN = 8;
 static const int TILE_SCALING = 1;
 
 static const int TILE_SIZE = 32 * TILE_SCALING;
 
-static const int WORLD_WIDTH = 512 / TILE_SCALING;
-static const int WORLD_HEIGHT = 512 / TILE_SCALING;
+static const int WORLD_WIDTH = (100 * WORLD_SPAN) / TILE_SCALING;
+static const int WORLD_HEIGHT = (100 * WORLD_SPAN) / TILE_SCALING;
 
 static const int SCREEN_WIDTH = 1024;
 static const int SCREEN_HEIGHT = 768;
 
-static const int TREE_SPAWN = (WORLD_WIDTH * WORLD_HEIGHT) * ((TILE_SCALING*TILE_SCALING) / 8.0f);
+static const int TREE_SPAWN = (WORLD_WIDTH * WORLD_HEIGHT) * ((TILE_SCALING*TILE_SCALING) / 20.0f);
 
 static const double PLAYER_SPEED = 200;
 static const double PLAYER_ACCELERATION = 400;
@@ -35,6 +40,13 @@ static SDL_Window* window;
 static SDL_Renderer* renderer;
 static RtEcs::RtEcs* rtEcs;
 
+static const char FONT_FILE[] = "VeraMono-Bold.ttf";
+static const char SEPARATOR =
+#ifdef _WIN32
+        '\\';
+#else
+        '/';
+#endif
 
 ///////////////////////////////////////////////////////////////////
 /////////////////       HELPER CLASSES       //////////////////////
@@ -54,6 +66,30 @@ private:
     std::uniform_int_distribution<> random;
 };
 
+class Writer {
+public:
+    explicit Writer(const char* path) {
+        font = TTF_OpenFont(path, 24);
+        if(!font)
+            printf("TTF_OpenFont failed: %s\n", TTF_GetError());
+    }
+
+    void write(int x, int y, const std::string& text) {
+        SDL_Surface* textSurface = TTF_RenderText_Solid(font, text.c_str(), textColor);
+        SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+        int text_width = textSurface->w;
+        int text_height = textSurface->h;
+        SDL_FreeSurface(textSurface);
+        SDL_Rect renderQuad = { x, y, text_width, text_height };
+        SDL_RenderCopy(renderer, textTexture, NULL, &renderQuad);
+        SDL_DestroyTexture(textTexture);
+    }
+
+private:
+    SDL_Color textColor = { 0, 0, 0, 255 };
+    TTF_Font* font;
+};
+Writer* writer;
 
 ///////////////////////////////////////////////////////////////////
 ////////////////         STRUCTURES          //////////////////////
@@ -236,7 +272,7 @@ private:
 
 struct Body {
 
-    Body()= default;;
+    Body()= default;
     Body (int size, Uint8 red, Uint8 green, Uint8 blue)
     : size(size), red(red), green(green), blue(blue) {}
 
@@ -283,7 +319,7 @@ public:
 
     RtEcs::Entity player;
 
-    void update(double delta) override {
+    void update(float delta) override {
         //Handle events on queue
         SDL_Event e;
         while( SDL_PollEvent( &e ) != 0 ) {
@@ -358,6 +394,12 @@ public:
             }
         }
 
+        writer->write(10, 10, "Trees: " + std::to_string(TREE_SPAWN));
+        writer->write(10, 30, "KIs:   " + std::to_string(FOLLOWER_SPAWN));
+
+        writer->write(10, 60, "Delta: " + std::to_string(delta));
+        writer->write(10, 80, "FPS:   " + std::to_string(1 / delta));
+
         SDL_RenderPresent( renderer );
     }
 };
@@ -366,11 +408,11 @@ public:
 class MoveSystem : public RtEcs::IntervalSystem<Movement, Position> {
 
 public:
-    MoveSystem(EcsCore::uint32 intervals, double initDelta) : IntervalSystem(intervals, initDelta) {}
+    MoveSystem(EcsCore::uint32 intervals, float initDelta) : IntervalSystem(intervals, initDelta) {}
 
 private:
 
-    void update(RtEcs::Entity entity, double delta) override {
+    void update(RtEcs::Entity entity, float delta) override {
 
         auto* position = entity.getComponent<Position>();
         auto* movement = entity.getComponent<Movement>();
@@ -383,11 +425,11 @@ private:
 class CollisionSystem : public RtEcs::IntervalSystem<Movement, Position, Body> {
 
 public:
-    CollisionSystem(EcsCore::uint32 intervals, double initDelta) : IntervalSystem(intervals, initDelta) {}
+    CollisionSystem(EcsCore::uint32 intervals, float initDelta) : IntervalSystem(intervals, initDelta) {}
 
 private:
 
-    void update(RtEcs::Entity entity, double delta) override {
+    void update(RtEcs::Entity entity, float delta) override {
 
         auto* position = entity.getComponent<Position>();
         auto* body = entity.getComponent<Body>();
@@ -428,9 +470,9 @@ private:
 class PerceptionSystem : public RtEcs::IntervalSystem<Perception, Position> {
 
 public:
-    PerceptionSystem(EcsCore::uint32 intervals, double initDelta) : IntervalSystem(intervals, initDelta) {}
+    PerceptionSystem(EcsCore::uint32 intervals, float initDelta) : IntervalSystem(intervals, initDelta) {}
 
-    void update(RtEcs::Entity entity, double delta) override {
+    void update(RtEcs::Entity entity, float delta) override {
         auto* position = entity.getComponent<Position>();
         auto* perception = entity.getComponent<Perception>();
 
@@ -447,11 +489,11 @@ public:
 class KISystem : public RtEcs::IntervalSystem<KI, Perception, Position, Movement> {
 
 public:
-    KISystem(EcsCore::uint32 intervals, double initDelta) : IntervalSystem(intervals, initDelta) {}
+    KISystem(EcsCore::uint32 intervals, float initDelta) : IntervalSystem(intervals, initDelta) {}
 
 public:
 
-    void update(RtEcs::Entity entity, double delta) override {
+    void update(RtEcs::Entity entity, float delta) override {
         auto* ki = entity.getComponent<KI>();
         auto* perception = entity.getComponent<Perception>();
         auto* position = entity.getComponent<Position>();
@@ -478,6 +520,27 @@ public:
 ///////////////////////////////////////////////////////////////////
 //////////////////      INITIALIZATION       //////////////////////
 ///////////////////////////////////////////////////////////////////
+
+void initWriter() {
+
+    char wd[PATH_MAX];
+    getcwd(wd, sizeof(wd));
+
+    int wdLength = std::string(wd).size();
+
+    wd[wdLength] = SEPARATOR;
+    int i = 0;
+    for (i = 0; i < sizeof(FONT_FILE); i++) {
+        wd[wdLength + i + 1] = FONT_FILE[i];
+    }
+    wd[wdLength + i + 1] = 0;
+
+    if(TTF_Init() == -1)
+        printf("TTF_Init failed: %s\n", TTF_GetError());
+
+    writer = new Writer(wd);
+
+}
 
 void initSdl() {
 
@@ -566,6 +629,8 @@ double getDelta(Uint32 ticks) {
 
 int main() {
 
+    initWriter();
+
     initSdl();
 
     initRtEcs();
@@ -577,5 +642,4 @@ int main() {
     closeApp();
 
 }
-
 

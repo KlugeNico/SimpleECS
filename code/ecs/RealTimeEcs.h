@@ -9,6 +9,7 @@
 
 namespace RtEcs {
 
+    typedef float DELTA_TYPE;
 
     class Entity {
 
@@ -62,7 +63,7 @@ namespace RtEcs {
     class System {
 
     public:
-        virtual void update(double delta) = 0;
+        virtual void update(DELTA_TYPE delta) = 0;
 
         virtual void init(EcsCore::Manager* pManager) {
             manager = pManager;
@@ -72,9 +73,22 @@ namespace RtEcs {
             return {manager, entityId};
         }
 
+        Entity createEntity() {
+            return {manager, manager->createEntity()};
+        }
+
         template<typename T>
         T* getComponent(EcsCore::Entity_Id entityId) {
             return manager->getComponent<T>(entityId);
+        }
+
+        template<typename ... Ts>
+        EcsCore::uint32 countEntities(Ts*... ts) {
+            return manager->getEntityAmount<Ts...>(ts...);
+        }
+
+        EcsCore::uint32 countEntities() {
+            return manager->getEntityAmount();
         }
 
     protected:
@@ -101,7 +115,7 @@ namespace RtEcs {
             systems.push_back(system);
         }
 
-        void update(double delta) {
+        void update(DELTA_TYPE delta) {
             for (System* system : systems) {
                 system->update(delta);
             }
@@ -147,7 +161,7 @@ namespace RtEcs {
     public:
         virtual void update(Entity entity, double delta) = 0;
 
-        void update(double delta) override {
+        void update(DELTA_TYPE delta) override {
             EcsCore::Entity_Id entityId = System::manager->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             while (entityId != EcsCore::INVALID) {
                 update(Entity(System::manager, entityId), delta);
@@ -162,9 +176,11 @@ namespace RtEcs {
     class IntervalSystem : public IteratingSystem<Ts...> {
 
     public:
-        virtual void update(Entity entity, double delta) = 0;
+        virtual void start(DELTA_TYPE delta){};
+        virtual void update(Entity entity, DELTA_TYPE delta) = 0;
+        virtual void end(DELTA_TYPE delta){};
 
-        IntervalSystem(EcsCore::uint32 intervals, double initDelta)
+        IntervalSystem(EcsCore::uint32 intervals, DELTA_TYPE initDelta)
             : intervals(intervals), overallDelta(initDelta) {
 
                 leftIntervals = intervals;
@@ -172,7 +188,9 @@ namespace RtEcs {
                     throw std::invalid_argument("Minimum 1 Interval!");
         }
 
-        void update(double delta) override {
+        void update(DELTA_TYPE delta) override {
+
+            start(delta);
 
             EcsCore::Entity_Id entityId;
             if (leftIntervals == 1) {
@@ -207,13 +225,15 @@ namespace RtEcs {
             else
                 leftIntervals--;
 
+            end(delta);
+
         }
 
     private:
         EcsCore::uint32 intervals;
         EcsCore::uint32 leftIntervals;
         EcsCore::uint32 treated = 0;
-        double deltaSum = 0;
+        DELTA_TYPE deltaSum = 0;
         double overallDelta;
 
     };
