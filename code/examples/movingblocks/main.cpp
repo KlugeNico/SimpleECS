@@ -31,7 +31,7 @@ static const int PLAYER_VISION = 640;
 static const int FOLLOWER_SPAWN = (WORLD_WIDTH * WORLD_HEIGHT) * ((TILE_SCALING*TILE_SCALING) / 128.0f);
 static const int FOLLOWER_PERCEPTION = 320;
 
-static EcsCore::uint32 MAX_ENTITIES = 10000000;
+static EcsCore::uint32 MAX_ENTITIES = 100000;
 static EcsCore::uint32 MAX_COMPONENTS = 256;
 
 static bool quit = false;

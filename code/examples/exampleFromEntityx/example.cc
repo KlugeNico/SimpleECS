@@ -123,19 +123,19 @@ public:
             RtEcs::Entity entity = createEntity();
 
             // Mark as collideable (explosion particles will not be collideable).
-            entity.addComponent(new Collideable(r(10, 5)));
-            auto* collideable = entity.getComponent<Collideable>();
+            auto* collideable = new Collideable(r(10, 5));
 
             // "Physical" attributes.
-            entity.addComponent(new Body(
+            auto* body = new Body(
                     sf::Vector2f(r(size.x), r(size.y)),
-                    sf::Vector2f(r(100, -50), r(100, -50))));
+                    sf::Vector2f(r(100, -50), r(100, -50)));
 
             // Shape to apply to entity.
             Renderable shape(new sf::CircleShape(collideable->radius));
             shape->setFillColor(sf::Color(r(128, 127), r(128, 127), r(128, 127), 0));
             shape->setOrigin(collideable->radius, collideable->radius);
-            entity.addComponent(new Renderable(shape));
+
+            entity.addComponents(collideable, body, new Renderable(shape));
         }
     }
 
@@ -348,15 +348,17 @@ public:
             float rotationd = r(720, 180);
             if (std::rand() % 2 == 0) rotationd = -rotationd;
 
+            float radius = r(3, 1);
+
             float offset = r(collideable->radius, 1);
             float angle = r(360) * M_PI / 180.0;
-            particle.addComponent(new Body(
-                    body->position + sf::Vector2f(offset * cos(angle), offset * sin(angle)),
-                    body->direction + sf::Vector2f(offset * 2 * cos(angle), offset * 2 * sin(angle)),
-                    rotationd));
 
-            float radius = r(3, 1);
-            particle.addComponent(new Particle(colour, radius, radius / 2));
+            particle.addComponents(
+                    new Body(
+                        body->position + sf::Vector2f(offset * cos(angle), offset * sin(angle)),
+                        body->direction + sf::Vector2f(offset * 2 * cos(angle), offset * 2 * sin(angle)),
+                        rotationd),
+                    new Particle(colour, radius, radius / 2));
         }
     }
 
@@ -397,11 +399,14 @@ public:
 
     void end(float delta) {
         last_update += delta;
+        overall_delta += delta;
         frame_count++;
+        overall_frame_count++;
         if (last_update >= 0.5) {
             std::ostringstream out;
             const double fps = frame_count / last_update;
-            out << countEntities() << " entities (" << static_cast<int>(fps) << " fps)";
+            const double overall_fps = overall_frame_count / overall_delta;
+            out << countEntities() << " entities FPS: " << static_cast<int>(fps) << " => " << static_cast<int>(overall_fps);
             text.setString(out.str());
             last_update = 0.0;
             frame_count = 0.0;
@@ -412,6 +417,8 @@ public:
 private:
     double last_update = 0.0;
     double frame_count = 0.0;
+    double overall_frame_count = 0;
+    double overall_delta = 0;
     sf::RenderTarget &target;
     sf::Text text;
 };
@@ -450,7 +457,7 @@ int main() {
         return 1;
     }
 
-    Application app(1000000, 20, window, font);
+    Application app(200000, 20, window, font);
 
     sf::Clock clock;
     while (window.isOpen()) {

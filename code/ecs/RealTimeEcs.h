@@ -10,10 +10,12 @@
 namespace RtEcs {
 
     typedef float DELTA_TYPE;
+    DELTA_TYPE INIT_DELTA = 0.1;
 
     class Entity {
 
     public:
+
         Entity(EcsCore::Manager *manager, EcsCore::Entity_Id entityId)
             : manager(manager), entityId(entityId) {
         }
@@ -28,7 +30,7 @@ namespace RtEcs {
 
         template<typename ... Ts>
         bool addComponents(Ts*... components) {
-            manager->addComponent(entityId, components...);
+            manager->addComponents(entityId, components...);
         }
 
         bool erase() {
@@ -180,7 +182,7 @@ namespace RtEcs {
         virtual void update(Entity entity, DELTA_TYPE delta) = 0;
         virtual void end(DELTA_TYPE delta){};
 
-        IntervalSystem(EcsCore::uint32 intervals, DELTA_TYPE initDelta)
+        IntervalSystem(EcsCore::uint32 intervals, DELTA_TYPE initDelta = INIT_DELTA)
             : intervals(intervals), overallDelta(initDelta) {
 
                 leftIntervals = intervals;
