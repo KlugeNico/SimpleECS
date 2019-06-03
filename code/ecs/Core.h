@@ -1,6 +1,12 @@
-//
-// Created by Nico Kluge on 26.01.19.
-//
+/*
+ * Copyright (C) 2019 Nico Kluge <klugenico@mailbox.org>
+ * All rights reserved.
+ *
+ * This software is licensed as described in the file LICENSE, which
+ * you should have received as part of this distribution.
+ *
+ * Author: Nico Kluge <klugenico@mailbox.org>
+ */
 
 #ifndef SIMPLE_ECS_CORE_H
 #define SIMPLE_ECS_CORE_H

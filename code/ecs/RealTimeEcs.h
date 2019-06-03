@@ -1,6 +1,12 @@
-//
-// Created by Nico Kluge on 01.04.19.
-//
+/*
+ * Copyright (C) 2019 Nico Kluge <klugenico@mailbox.org>
+ * All rights reserved.
+ *
+ * This software is licensed as described in the file LICENSE, which
+ * you should have received as part of this distribution.
+ *
+ * Author: Nico Kluge <klugenico@mailbox.org>
+ */
 
 #ifndef SIMPLE_ECS_ACCESS_H
 #define SIMPLE_ECS_ACCESS_H
@@ -192,7 +198,8 @@ namespace RtEcs {
 
         void update(DELTA_TYPE delta) override {
 
-            start(delta);
+            if (leftIntervals == intervals)
+                start(delta);
 
             EcsCore::Entity_Id entityId;
             if (leftIntervals == 1) {
@@ -223,11 +230,10 @@ namespace RtEcs {
                 leftIntervals = intervals;
                 overallDelta = deltaSum;
                 deltaSum = 0;
+                end(delta);
             }
             else
                 leftIntervals--;
-
-            end(delta);
 
         }
 

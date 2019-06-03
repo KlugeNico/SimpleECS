@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2019 Nico Kluge <klugenico@mailbox.org>
+ * All rights reserved.
+ *
+ * This software is licensed as described in the file LICENSE, which
+ * you should have received as part of this distribution.
+ *
+ * Author: Nico Kluge <klugenico@mailbox.org>
+ */
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <iostream>

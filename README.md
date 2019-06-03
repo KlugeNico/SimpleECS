@@ -2,7 +2,7 @@
 
 A small and simple [Entity Component System](https://en.wikipedia.org/wiki/Entity_component_system) written with CLion in C++ 11.
 
-This project is orientated to the [EntityX Project](https://github.com/alecthomas/entityx)
+This project is orientated to the [EntityX Project](https://github.com/alecthomas/entityx).
 
 I made my own ECS, to get a better understanding for ECS and to get full control to implement features I need.
 
@@ -30,7 +30,7 @@ As far as I understood the code of EntityX, it is designed in a way I, which mak
 
 ### Iterating over entities
 
-Each used combination of components (usually in Systems) organizes its own list of related entities. Each time a component is added or removed from an entity, every list gets updated. In this way I don't need to iterate over all entities and check for relation while running the systems. But it consumes a lot of ram to organize the lists. Also it makes adding and removing components more expensive.
+Each used combination of components (usually in Systems) organizes its own list of related entities. Each time a component is added or removed from an entity, every list gets updated. In this way I don't need to iterate over all entities and check for relation while running the systems. But it consumes a lot of memory to organize the lists. Also it makes adding and removing components more expensive.
 
 ### Component storage
 
@@ -38,9 +38,12 @@ Components are stored in ComponentHandles. The ComponentHandles are containing v
 
 ## Usage
 
-The project contains a [Core](code/ecs/Core.h) file, which is a standalone header file with all main functionality. Because using the core directly is a little bit unhandy there is also a [Wrapper](code/ecs/RealTimeEcs.h) for real time applications (supports fps and comfortable systems). Additional there is an external [EventHandler](code/ecs/EventHandler.h).
+The project contains a [Core](code/ecs/Core.h) file, which is a standalone header file with all main functionality. Because using the core directly is a little bit unhandy there is also a [Wrapper for real time applications](code/ecs/RealTimeEcs.h) (supports fps and comfortable systems). Additional there is an external [EventHandler](code/ecs/EventHandler.h).
 
-The ECS takes care about the deletion of removed components. Also if the entity gets deleted. So you should not assign one component object to multiple entities;
+The ECS takes care about the deletion of removed components. Also if the entity gets deleted. So you should not assign one component object to multiple entities.
 
 There are three examples which demonstrate the usage of the real time wrapper.
 
+- [A very small example](code/examples/walkingLetters/main.cpp) which explains the the fundamental usage. (Recommended to start with.)
+- [The SFML example from EntityX](code/examples/exampleFromEntityx/example.cc) changed to use SimpleECS.
+- [Some small "game"](code/examples/movingblocks/main.cpp) with SDL2.

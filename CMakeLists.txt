@@ -31,7 +31,7 @@ ELSE()
     message("Can't build example entitxExample: Install SDL2 OpenGL and SDL2TTF, if you wanna run it.")
 ENDIF()
 
-add_executable(circleOfLifeExample code/examples/circleOfLife/main.cpp)
+add_executable(walkingLetters code/examples/walkingLetters/main.cpp)
 
 add_executable(benchmark_test code/test/Benchmarks_test.cc)
 target_link_libraries(benchmark_test gtest gtest_main)
