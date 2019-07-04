@@ -36,5 +36,5 @@ add_executable(walkingLetters code/examples/walkingLetters/main.cpp)
 add_executable(benchmark_test code/test/Benchmarks_test.cc)
 target_link_libraries(benchmark_test gtest gtest_main)
 
-add_executable(functionality_test code/test/functionality/Bitset.cc code/test/functionality/Core.cc code/test/functionality/RealTimeEcs.cc)
+add_executable(functionality_test code/test/functionality/BitsetTest.cc code/test/functionality/CoreTest.cc)
 target_link_libraries(functionality_test gtest gtest_main)

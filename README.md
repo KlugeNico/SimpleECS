@@ -47,3 +47,7 @@ There are three examples which demonstrate the usage of the real time wrapper.
 - [A very small example](code/examples/walkingLetters/main.cpp) which explains the the fundamental usage. (Recommended to start with.)
 - [The SFML example from EntityX](code/examples/exampleFromEntityx/example.cc) changed to use SimpleECS.
 - [Some small "game"](code/examples/movingblocks/main.cpp) with SDL2.
+
+## Contact
+
+You can contact me for any questions or suggestions via [Email](mailto:klugenico@mailbox.org).

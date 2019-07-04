@@ -237,6 +237,8 @@ namespace EcsCore {
             }
 
             void addComponent(Entity_Index entityIndex, void *component) {
+                if (components[entityIndex] != nullptr)
+                    destroy(components[entityIndex]);
                 components[entityIndex] = component;
             }
 

@@ -26,9 +26,6 @@ namespace RtEcs {
             : manager(manager), entityId(entityId) {
         }
 
-        explicit Entity(EcsCore::Manager *manager) : manager(manager), entityId(0) {
-        }
-
         template<typename T>
         bool addComponent(T* component) {
             manager->addComponent(entityId, component);
@@ -71,6 +68,8 @@ namespace RtEcs {
     class System {
 
     public:
+        virtual ~System() = default;
+
         virtual void update(DELTA_TYPE delta) = 0;
 
         virtual void init(EcsCore::Manager* pManager) {
@@ -90,6 +89,7 @@ namespace RtEcs {
             return manager->getComponent<T>(entityId);
         }
 
+        // This method generates a new list with related entities, if not already existing.
         template<typename ... Ts>
         EcsCore::uint32 countEntities(Ts*... ts) {
             return manager->getEntityAmount<Ts...>(ts...);
@@ -167,6 +167,7 @@ namespace RtEcs {
     class IterateAllSystem : public IteratingSystem<Ts...> {
 
     public:
+
         virtual void update(Entity entity, double delta) = 0;
 
         void update(DELTA_TYPE delta) override {
@@ -188,7 +189,7 @@ namespace RtEcs {
         virtual void update(Entity entity, DELTA_TYPE delta) = 0;
         virtual void end(DELTA_TYPE delta){};
 
-        IntervalSystem(EcsCore::uint32 intervals, DELTA_TYPE initDelta = INIT_DELTA)
+        explicit IntervalSystem(EcsCore::uint32 intervals, DELTA_TYPE initDelta = INIT_DELTA)
             : intervals(intervals), overallDelta(initDelta) {
 
                 leftIntervals = intervals;
