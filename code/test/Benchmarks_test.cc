@@ -20,7 +20,7 @@ private:
 };
 
 /*
-struct Listener : public Receiver<Listener> {
+struct Listener : public Listener<Listener> {
     void receive(const EntityCreatedEvent &event) { ++created; }
     void receive(const EntityDestroyedEvent &event) { ++destroyed; }
 

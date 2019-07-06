@@ -111,7 +111,7 @@ int main() {
     RtEcs::INIT_DELTA = 1;
 
     // Here we init the ecs with a capacity of maximal 1000 entities and 10 components.
-    RtEcs::RtEcs ecs = RtEcs::RtEcs(1000, 10);
+    RtEcs::RtManager ecs = RtEcs::RtManager(1000, 10);
 
     // Here we register our components. We could include them in an extern library and register them with the same name,
     // to access them from the external library. Registering different components with the same name in two libraries

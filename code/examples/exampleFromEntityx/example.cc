@@ -60,8 +60,6 @@ using std::endl;
 
 static const std::string FONT_FILE = "VeraMono-Bold.ttf";
 
-SimpleEH::SimpleEventHandler events = SimpleEH::SimpleEventHandler();
-
 float r(int a, float b = 0) {
     return static_cast<float>(std::rand() % (a * 1000) + b * 1000) / 1000.0;
 }
@@ -250,8 +248,10 @@ private:
             for (const Candidate &left : candidates) {
                 for (const Candidate &right : candidates) {
                     if (left.entity == right.entity) continue;
-                    if (collided(left, right))
-                        events.emit(CollisionEvent(left.entity, right.entity));
+                    if (collided(left, right)) {
+                        CollisionEvent collisionEvent = CollisionEvent(left.entity, right.entity);
+                        emitEvent(collisionEvent);
+                    }
                 }
             }
         }
@@ -318,11 +318,12 @@ private:
 
 
 // For any two colliding bodies, destroys the bodies and emits a bunch of bodgy explosion particles.
-class ExplosionSystem : public RtEcs::System, public SimpleEH::Receiver<CollisionEvent> {
+class ExplosionSystem : public RtEcs::System, public SimpleEH::Listener<CollisionEvent> {
 
 public:
-    ExplosionSystem() {
-        events.subscribe(this);
+    ExplosionSystem(RtEcs::RtManager* manager) {
+        manager->registerEvent<CollisionEvent>("CollisionEvent");
+        manager->subscribeEvent(this);
     }
 
     void update(RtEcs::DELTA_TYPE delta) override {
@@ -424,10 +425,10 @@ private:
 };
 
 
-class Application : public RtEcs::RtEcs {
+class Application : public RtEcs::RtManager {
 public:
     explicit Application(EcsCore::uint32 maxEntities, EcsCore::uint32 maxComponents, sf::RenderTarget &target,
-                         sf::Font &font) : RtEcs(maxEntities, maxComponents) {
+                         sf::Font &font) : RtManager(maxEntities, maxComponents) {
         registerComponent<Body>("Body");
         registerComponent<Particle>("Particle");
         registerComponent<Collideable>("Collideable");
@@ -437,7 +438,7 @@ public:
         addSystem(new BodySystem(1, 0.1));
         addSystem(new BounceSystem(1, 0.1, target));
         addSystem(new CollisionSystem(1, 0.1, target));
-        addSystem(new ExplosionSystem());
+        addSystem(new ExplosionSystem(this));
         addSystem(new ParticleSystem(1, 0.1));
         addSystem(new RenderSystem(1, 0.1, target, font));
         addSystem(new ParticleRenderSystem(1, 0.1, target));

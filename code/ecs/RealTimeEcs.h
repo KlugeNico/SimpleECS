@@ -12,10 +12,21 @@
 #define SIMPLE_ECS_ACCESS_H
 
 #include "Core.h"
+#include "EventHandler.h"
 
 namespace RtEcs {
 
     typedef float DELTA_TYPE;
+
+    typedef EcsCore::uint32 uint32;
+    typedef EcsCore::uint64 uint64;
+    typedef EcsCore::Entity_Id Entity_Id;
+
+    typedef SimpleEH::Event_Key Event_Key;
+
+    template<typename T>
+    using Receiver = SimpleEH::Listener<T>;
+
     DELTA_TYPE INIT_DELTA = 0.1;
 
     class Entity {
@@ -72,8 +83,9 @@ namespace RtEcs {
 
         virtual void update(DELTA_TYPE delta) = 0;
 
-        virtual void init(EcsCore::Manager* pManager) {
+        virtual void init(EcsCore::Manager* pManager, SimpleEH::SimpleEventHandler* pEventHandler) {
             manager = pManager;
+            eventHandler = pEventHandler;
         }
 
         Entity getEntity(EcsCore::Entity_Id entityId) {
@@ -99,51 +111,66 @@ namespace RtEcs {
             return manager->getEntityAmount();
         }
 
+        template<typename T>
+        void emitEvent(T& event) {
+            eventHandler->emit(event);
+        }
+
+        template<typename T>
+        void subscribeEvent(SimpleEH::Listener<T>* listener) {
+            eventHandler->subscribe<T>(listener);
+        }
+
+        template<typename T>
+        bool unsubscribeEvent(SimpleEH::Listener<T>* listener) {
+            return eventHandler->unsubscribe<T>(listener);
+        }
+
+        template<typename T>
+        void registerEvent(Event_Key eventKey) {
+            eventHandler->registerEvent<T>(eventKey);
+        }
+
     protected:
         EcsCore::Manager* manager = nullptr;
+        SimpleEH::SimpleEventHandler* eventHandler = nullptr;
 
     };
 
 
-    class RtEcs {
+    class RtManager : public System {
 
     public:
 
-        ~RtEcs() {
+        RtManager(EcsCore::uint32 maxEntities, EcsCore::uint32 maxComponents) {
+            manager = new EcsCore::Manager(maxEntities, maxComponents);
+            eventHandler = new SimpleEH::SimpleEventHandler();
+        }
+
+        ~RtManager() override {
+            delete manager;
+            delete eventHandler;
             for (System* system : systems)
                 delete system;
         }
 
-        RtEcs(EcsCore::uint32 maxEntities, EcsCore::uint32 maxComponents) :
-                manager(maxEntities, maxComponents) {
-        }
-
         void addSystem(System* system) {
-            system->init(&manager);
+            system->init(manager, eventHandler);
             systems.push_back(system);
         }
 
-        void update(DELTA_TYPE delta) {
+        template<typename T>
+        void registerComponent(EcsCore::Component_Key key) {
+            manager->registerComponent<T>(key);
+        }
+
+        void update(DELTA_TYPE delta) override {
             for (System* system : systems) {
                 system->update(delta);
             }
         }
 
-        EcsCore::Manager* getEcsCoreManager() {
-            return &manager;
-        }
-
-        Entity createEntity() {
-            return {&manager, manager.createEntity()};
-        }
-
-        template<typename T>
-        void registerComponent(EcsCore::Component_Key key) {
-            manager.registerComponent<T>(key);
-        }
-
     private:
-        EcsCore::Manager manager;
         std::vector<System*> systems;
 
     };
@@ -155,8 +182,8 @@ namespace RtEcs {
     protected:
         EcsCore::SetIterator_Id setIteratorId = 0;
 
-        void init(EcsCore::Manager *pManager) override {
-            System::init(pManager);
+        void init(EcsCore::Manager *pManager, SimpleEH::SimpleEventHandler* eventHandler) override {
+            System::init(pManager, eventHandler);
             setIteratorId = manager->createSetIterator(new Ts...);
         }
 

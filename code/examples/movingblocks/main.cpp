@@ -48,7 +48,7 @@ static bool quit = false;
 
 static SDL_Window* window;
 static SDL_Renderer* renderer;
-static RtEcs::RtEcs* rtEcs;
+static RtEcs::RtManager* rtEcs;
 
 static const char FONT_FILE[] = "VeraMono-Bold.ttf";
 static const char SEPARATOR =
@@ -570,7 +570,7 @@ void initSdl() {
 
 void initRtEcs() {
 
-    rtEcs = new RtEcs::RtEcs (MAX_ENTITIES, MAX_COMPONENTS);
+    rtEcs = new RtEcs::RtManager (MAX_ENTITIES, MAX_COMPONENTS);
 
     rtEcs->registerComponent<Player>("player");
     rtEcs->registerComponent<Position>("position");

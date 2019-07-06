@@ -13,8 +13,10 @@
 
 namespace SimpleEH {
 
+    typedef std::string Event_Key;
+
     template<typename T>
-    class Receiver {
+    class Listener {
     public:
         virtual void receive(T* event) = 0;
     };
@@ -23,13 +25,13 @@ namespace SimpleEH {
 
     public:
         template<typename T>
-        void subscribe(Receiver<T>* receiver) {
-            list<T>()->push_back(receiver);
+        void subscribe(Listener<T>* listener) {
+            list<T>()->push_back(listener);
         }
 
         template<typename T>
-        bool unsubscribe(Receiver<T>* toRemove) {
-            std::vector<Receiver<T>*>* rList = list<T>();
+        bool unsubscribe(Listener<T>* toRemove) {
+            std::vector<Listener<T>*>* rList = list<T>();
             for (int i = 0; i < rList->size(); i++) {
                 if ((*rList)[i] == toRemove) {
                     (*rList)[i] = (*rList)[rList->size() - 1];
@@ -41,17 +43,37 @@ namespace SimpleEH {
         }
 
         template<typename T>
-        void emit(T event) {
-            std::vector<Receiver<T>*>* rList = list<T>();
+        void emit(T& event) {
+            std::vector<Listener<T>*>* rList = list<T>();
             for (int i = 0; i < rList->size(); i++) {
                 (*rList)[i]->receive(&event);
             }
         }
 
         template<typename T>
-        std::vector<Receiver<T>*>* list() {
-            static std::vector<Receiver<T>*> list = std::vector<Receiver<T>*>();
-            return &list;
+        void registerEvent(Event_Key eventKey) {
+            list<T>(eventKey);
+        }
+
+    private:
+        std::unordered_map<Event_Key, void*> receiverLists;
+
+        template<typename T>
+        std::vector<Listener<T>*>* list(Event_Key eventKey = Event_Key()) {
+            static std::vector<Listener<T>*>* receiverList = linkReceiverList<T>(&eventKey);
+            return receiverList;
+        }
+
+        template<typename T>
+        std::vector<Listener<T>*>* linkReceiverList(Event_Key *eventKey) {
+            if (eventKey->empty())
+                throw std::invalid_argument("Tried to use unregistered event!");
+            if (receiverLists[*eventKey] == nullptr) {
+                auto *listPointer = new std::vector<Listener<T>*>;
+                receiverLists[*eventKey] = reinterpret_cast<void *>(listPointer);
+            }
+            auto *listPointer = reinterpret_cast<std::vector<Listener<T>*>*>(receiverLists[*eventKey]);
+            return listPointer;
         }
 
     };
