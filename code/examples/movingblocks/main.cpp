@@ -418,7 +418,7 @@ public:
 class MoveSystem : public RtEcs::IntervalSystem<Movement, Position> {
 
 public:
-    MoveSystem(EcsCore::uint32 intervals, float initDelta) : IntervalSystem(intervals, initDelta) {}
+    MoveSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
 
 private:
 
@@ -435,7 +435,7 @@ private:
 class CollisionSystem : public RtEcs::IntervalSystem<Movement, Position, Body> {
 
 public:
-    CollisionSystem(EcsCore::uint32 intervals, float initDelta) : IntervalSystem(intervals, initDelta) {}
+    CollisionSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
 
 private:
 
@@ -480,7 +480,7 @@ private:
 class PerceptionSystem : public RtEcs::IntervalSystem<Perception, Position> {
 
 public:
-    PerceptionSystem(EcsCore::uint32 intervals, float initDelta) : IntervalSystem(intervals, initDelta) {}
+    PerceptionSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
 
     void update(RtEcs::Entity entity, float delta) override {
         auto* position = entity.getComponent<Position>();
@@ -499,7 +499,7 @@ public:
 class KISystem : public RtEcs::IntervalSystem<KI, Perception, Position, Movement> {
 
 public:
-    KISystem(EcsCore::uint32 intervals, float initDelta) : IntervalSystem(intervals, initDelta) {}
+    KISystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
 
 public:
 
@@ -608,10 +608,10 @@ void initRtEcs() {
     }
 
     rtEcs->addSystem(new PlayerSystem(player));
-    rtEcs->addSystem(new PerceptionSystem(10, 0.1f));
-    rtEcs->addSystem(new MoveSystem(1, 0.1f));
-    rtEcs->addSystem(new CollisionSystem(1, 0.1f));
-    rtEcs->addSystem(new KISystem(8, 0.1f));
+    rtEcs->addSystem(new PerceptionSystem(10));
+    rtEcs->addSystem(new MoveSystem(1));
+    rtEcs->addSystem(new CollisionSystem(1));
+    rtEcs->addSystem(new KISystem(8));
 
 }
 

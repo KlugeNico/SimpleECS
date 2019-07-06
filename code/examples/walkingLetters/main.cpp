@@ -105,11 +105,6 @@ public:
 
 int main() {
 
-    // In the beginning we don't have any usable delta values in our IntervalSystems, because we didn't run through
-    // by now. Normally you can just ignore it. The default value is 0.1. Here we set it to 1. Because we never
-    // use it, it actually does'nt matter.
-    RtEcs::INIT_DELTA = 1;
-
     // Here we init the ecs with a capacity of maximal 1000 entities and 10 components.
     RtEcs::RtManager ecs = RtEcs::RtManager(1000, 10);
 

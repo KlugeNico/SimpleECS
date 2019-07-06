@@ -145,7 +145,7 @@ private:
 
 // Updates a body's position and rotation.
 struct BodySystem : public RtEcs::IntervalSystem<Body> {
-    BodySystem(EcsCore::uint32 intervals, RtEcs::DELTA_TYPE initDelta) : IntervalSystem(intervals, initDelta) {}
+    BodySystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
 
     void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
 
@@ -161,8 +161,8 @@ struct BodySystem : public RtEcs::IntervalSystem<Body> {
 // Bounce bodies off the edge of the screen.
 class BounceSystem : public RtEcs::IntervalSystem<Body> {
 public:
-    explicit BounceSystem(EcsCore::uint32 intervals, float initDelta, sf::RenderTarget &target) : IntervalSystem(
-            intervals, initDelta), size(target.getSize()) {}
+    explicit BounceSystem(EcsCore::uint32 intervals, sf::RenderTarget &target) : IntervalSystem(
+            intervals), size(target.getSize()) {}
 
     void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
         auto* body = entity.getComponent<Body>();
@@ -195,8 +195,8 @@ class CollisionSystem : public RtEcs::IntervalSystem<Body, Collideable> {
     };
 
 public:
-    explicit CollisionSystem(EcsCore::uint32 intervals, RtEcs::DELTA_TYPE initDelta, sf::RenderTarget &target)
-            : IntervalSystem(intervals, initDelta), size(target.getSize()) {
+    explicit CollisionSystem(EcsCore::uint32 intervals, sf::RenderTarget &target)
+            : IntervalSystem(intervals), size(target.getSize()) {
         size.x = size.x / PARTITIONS + 1;
         size.y = size.y / PARTITIONS + 1;
     }
@@ -270,7 +270,7 @@ private:
 // Fade out and then remove particles.
 class ParticleSystem : public RtEcs::IntervalSystem<Particle> {
 public:
-    ParticleSystem(EcsCore::uint32 intervals, RtEcs::DELTA_TYPE initDelta) : IntervalSystem(intervals, initDelta) {}
+    ParticleSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
 
     void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
         auto* particle = entity.getComponent<Particle>();
@@ -287,8 +287,8 @@ public:
 // Renders all explosion particles efficiently as a quad vertex array.
 class ParticleRenderSystem : public RtEcs::IntervalSystem<Particle, Body> {
 public:
-    explicit ParticleRenderSystem(EcsCore::uint32 intervals, RtEcs::DELTA_TYPE initDelta, sf::RenderTarget &target)
-            : IntervalSystem(intervals, initDelta), target(target) {}
+    explicit ParticleRenderSystem(EcsCore::uint32 intervals, sf::RenderTarget &target)
+            : IntervalSystem(intervals), target(target) {}
 
     void start(RtEcs::DELTA_TYPE delta) override {
         vertices = sf::VertexArray(sf::Quads);
@@ -378,8 +378,8 @@ private:
 // Render all Renderable entities and draw some informational text.
 class RenderSystem : public RtEcs::IntervalSystem<Body, Renderable> {
 public:
-    explicit RenderSystem(EcsCore::uint32 intervals, RtEcs::DELTA_TYPE initDelta, sf::RenderTarget &target,
-                          sf::Font &font) : IntervalSystem(intervals, initDelta), target(target) {
+    explicit RenderSystem(EcsCore::uint32 intervals, sf::RenderTarget &target,
+                          sf::Font &font) : IntervalSystem(intervals), target(target) {
         text.setFont(font);
         text.setPosition(sf::Vector2f(2, 2));
         text.setCharacterSize(18);
@@ -435,13 +435,13 @@ public:
         registerComponent<Renderable>("Renderable");
 
         addSystem(new SpawnSystem(target, 500));
-        addSystem(new BodySystem(1, 0.1));
-        addSystem(new BounceSystem(1, 0.1, target));
-        addSystem(new CollisionSystem(1, 0.1, target));
+        addSystem(new BodySystem(1));
+        addSystem(new BounceSystem(1, target));
+        addSystem(new CollisionSystem(1, target));
         addSystem(new ExplosionSystem(this));
-        addSystem(new ParticleSystem(1, 0.1));
-        addSystem(new RenderSystem(1, 0.1, target, font));
-        addSystem(new ParticleRenderSystem(1, 0.1, target));
+        addSystem(new ParticleSystem(1));
+        addSystem(new RenderSystem(1, target, font));
+        addSystem(new ParticleRenderSystem(1, target));
 
     }
 
