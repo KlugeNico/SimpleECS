@@ -148,7 +148,6 @@ struct Player {
 struct Position {
 
 public:
-    Position()= default;;
     Position (Entity_Id entityId, int x, int y) : entityId(entityId), x_(x), y_(y) {
         corral();
         world->getEntities(xInt() / world->tileSize, yInt() / world->tileSize)->push_front(entityId);
@@ -236,7 +235,6 @@ private:
 
 struct Movement {
 
-    Movement()= default;
     explicit Movement(float maxVelocity) : maxVelocity(maxVelocity) {}
 
     void accelerate(float acceleration, float direction, double delta) {
@@ -282,7 +280,6 @@ private:
 
 struct Body {
 
-    Body()= default;
     Body (int size, Uint8 red, Uint8 green, Uint8 blue)
     : size(size), red(red), green(green), blue(blue) {}
 
@@ -296,7 +293,6 @@ struct Body {
 
 struct Perception {
 
-    Perception()= default;
     explicit Perception(int visionDistance)
     : visionDistance(visionDistance) {}
 
@@ -310,7 +306,6 @@ struct KI {
 
     enum TYPE { NONE, FOLLOWER };
 
-    KI()= default;
     explicit KI(TYPE type) : type(type) {}
 
     TYPE type = NONE;

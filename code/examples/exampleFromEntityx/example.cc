@@ -97,7 +97,7 @@ struct Collideable {
     explicit Collideable(float radius) : radius(radius) {}
 
     float radius;
-}collideableTemplate(r(1,1));
+};
 
 
 // Emitted when two entities collide.
@@ -115,7 +115,7 @@ public:
 
     void update(RtEcs::DELTA_TYPE delta) override {
 
-        int c = countEntities<Collideable>(&collideableTemplate);
+        int c = countEntities<Collideable>();
 
         for (int i = 0; i < count - c; i++) {
             RtEcs::Entity entity = createEntity();

@@ -103,8 +103,8 @@ namespace RtEcs {
 
         // This method generates a new list with related entities, if not already existing.
         template<typename ... Ts>
-        EcsCore::uint32 countEntities(Ts*... ts) {
-            return manager->getEntityAmount<Ts...>(ts...);
+        EcsCore::uint32 countEntities() {
+            return manager->getEntityAmount<Ts...>();
         }
 
         EcsCore::uint32 countEntities() {
@@ -195,7 +195,7 @@ namespace RtEcs {
 
         void init(EcsCore::Manager *pManager, SimpleEH::SimpleEventHandler* eventHandler) override {
             System::init(pManager, eventHandler);
-            setIteratorId = manager->createSetIterator(new Ts...);
+            setIteratorId = manager->createSetIterator<Ts...>();
         }
 
     };

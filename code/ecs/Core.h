@@ -356,7 +356,7 @@ namespace EcsCore {
                 return false;
 
             std::vector<EcsCoreIntern::ComponentHandle*> chs = std::vector<EcsCoreIntern::ComponentHandle*>(sizeof...(Ts));
-            insertComponentHandles<Ts...>(&chs, 0, components...);
+            insertComponentHandles<void, Ts...>(&chs, 0);
 
             bool modified = false;
             for (EcsCoreIntern::ComponentHandle* ch : chs)
@@ -406,13 +406,13 @@ namespace EcsCore {
         }
 
         template<typename ... Ts>
-        SetIterator_Id createSetIterator(Ts *... ts) {
+        SetIterator_Id createSetIterator() {
 
             if (sizeof...(Ts) < 1)
                 throw std::invalid_argument("SetIterator must subserve at least one Component!");
 
             std::vector<Component_Id> componentIds = std::vector<Component_Id>(sizeof...(Ts));
-            insertComponentIds<Ts...>(&componentIds, ts...);
+            insertComponentIds<Ts...>(&componentIds);
             std::sort(componentIds.begin(), componentIds.end());
             EcsCoreIntern::EntitySet *entitySet = nullptr;
 
@@ -443,8 +443,8 @@ namespace EcsCore {
         }
 
         template<typename ... Ts>
-        uint32 getEntityAmount(Ts*... ts) {
-            static SetIterator_Id setIteratorId = createSetIterator<Ts...>(ts...);
+        uint32 getEntityAmount() {
+            static SetIterator_Id setIteratorId = createSetIterator<Ts...>();
             while (nextEntity(setIteratorId) != INVALID);
             return setIterators[setIteratorId]->getEntitySet()->getVagueAmount();
         }
@@ -486,23 +486,22 @@ namespace EcsCore {
         }
 
         template<typename ... Ts>
-        void insertComponentIds(std::vector<Component_Id> *ids, Ts*... components) {
+        void insertComponentIds(std::vector<Component_Id> *ids) {
             std::vector<EcsCoreIntern::ComponentHandle*> chs = std::vector<EcsCoreIntern::ComponentHandle*>(sizeof...(Ts));
-            insertComponentHandles<Ts...>(&chs, 0, components...);
+            insertComponentHandles<void, Ts...>(&chs, 0);
             for (int i = 0; i < chs.size(); i++) {
                 (*ids)[i] = chs[i]->getComponentId();
             }
         }
 
-        template<typename T>
-        void insertComponentHandles(std::vector<EcsCoreIntern::ComponentHandle *> *chs, int index, T* component) {
-            (*chs)[index] = getComponentHandle<T>();
+        template<typename V>
+        void insertComponentHandles(std::vector<EcsCoreIntern::ComponentHandle *> *chs, int index) {
         }
 
-        template<typename T, typename... Ts>
-        void insertComponentHandles(std::vector<EcsCoreIntern::ComponentHandle *> *chs, int index, T* component, Ts*... components) {
+        template<typename V, typename T, typename... Ts>
+        void insertComponentHandles(std::vector<EcsCoreIntern::ComponentHandle *> *chs, int index) {
             (*chs)[index] = getComponentHandle<T>();
-            insertComponentHandles<Ts...>(chs, ++index, components...);
+            insertComponentHandles<V, Ts...>(chs, ++index);
         }
 
         template<typename T>

@@ -35,8 +35,8 @@ TEST (ManagerTest, TestManagerCreate) {
     manager.registerComponent<Position>("p");
     manager.registerComponent<Size>("s");
 
-    SetIterator_Id s1 = manager.createSetIterator(new Position, new Size);
-    SetIterator_Id s2 = manager.createSetIterator(new Position);
+    SetIterator_Id s1 = manager.createSetIterator<Position, Size>();
+    SetIterator_Id s2 = manager.createSetIterator<Position>();
 
     ASSERT_EQ(manager.getEntityAmount(), 0);
 
@@ -83,7 +83,7 @@ TEST (ManagerTest, TestManagerCreate) {
     }
     ASSERT_EQ(amount, 7);
 
-    SetIterator_Id s3 = manager.createSetIterator(new Size);
+    SetIterator_Id s3 = manager.createSetIterator<Size>();
 
     manager.addComponent(manager.createEntity(), new Size);
     manager.addComponent(manager.createEntity(), new Position);
