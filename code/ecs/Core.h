@@ -453,6 +453,17 @@ namespace EcsCore {
             return lastEntityIndex - freeEntityIndices.size();
         }
 
+        template<typename T>
+        void makeAvailable(T* object) {
+            getSetSingleton(object);
+        }
+
+        template<typename T>
+        T* access() {
+            return getSetSingleton<T>();
+        }
+
+
     private:
         uint32 maxEntities;
         Entity_Index lastEntityIndex = 0;
@@ -546,6 +557,12 @@ namespace EcsCore {
             for (EcsCoreIntern::EntitySet *set : entitySets) {
                 set->updateMembership(entityId, previous, recent);
             }
+        }
+
+        template<typename T>
+        T* getSetSingleton(T* object = nullptr) {
+            static T* singleton = object;
+            return singleton;
         }
 
     };

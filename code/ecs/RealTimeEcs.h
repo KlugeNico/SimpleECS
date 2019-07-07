@@ -25,7 +25,9 @@ namespace RtEcs {
     typedef SimpleEH::Event_Key Event_Key;
 
     template<typename T>
-    using Receiver = SimpleEH::Listener<T>;
+    using Listener = SimpleEH::Listener<T>;
+
+    using namespace EcsCore;
 
     class Entity {
 
@@ -128,6 +130,17 @@ namespace RtEcs {
         void registerEvent(Event_Key eventKey) {
             eventHandler->registerEvent<T>(eventKey);
         }
+
+        template<typename T>
+        void makeAvailable(T* object) {
+            manager->makeAvailable(object);
+        }
+
+        template<typename T>
+        T* access() {
+            manager->access<T>();
+        }
+
 
     protected:
         EcsCore::Manager* manager = nullptr;

@@ -14,7 +14,7 @@ class SomeEvent {};
 class SomeOtherEvent {};
 class WrongEvent {};
 
-class SomeReceiver : public Receiver <SomeEvent>, public Receiver <SomeOtherEvent> {
+class SomeReceiver : public Listener <SomeEvent>, public Listener <SomeOtherEvent> {
 public:
     int amountReceived = 0;
 
