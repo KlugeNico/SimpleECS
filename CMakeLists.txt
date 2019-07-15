@@ -6,9 +6,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/out")
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/)
 
-add_subdirectory(googletest-release-1.8.1)
+if (NOT TARGET gtest)
+    add_subdirectory(googletest-release-1.8.1)
+endif()
 
-project(ECS)
+project(simpleecs)
 
 find_package(SDL2)
 find_package(OpenGL)
