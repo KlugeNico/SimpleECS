@@ -79,6 +79,8 @@ namespace EcsCore {
         class Entity {
 
         public:
+            explicit Entity() : version_(INVALID), componentMask(Bitset(0)) {}
+
             explicit Entity(Entity_Version version, uint32 maxComponentAmount) : version_(version), componentMask(
                     Bitset(maxComponentAmount)) {}
 
@@ -268,9 +270,9 @@ namespace EcsCore {
         Manager(uint32 maxEntities, uint32 maxComponents) :
                 maxEntities(maxEntities),
                 maxComponents(maxComponents),
-                componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(maxComponents + 1)) {
-            entities.reserve(maxEntities);
-            entities.emplace_back(0,0);
+                componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(maxComponents + 1)),
+                entities(std::vector<EcsCoreIntern::Entity>(maxEntities + 1))  {
+            entities[0] = EcsCoreIntern::Entity();
         }
 
         ~Manager() {
@@ -295,8 +297,8 @@ namespace EcsCore {
                 index = freeEntityIndices.back();
                 freeEntityIndices.pop_back();
             } else {
-                index = entities.size();
-                entities.emplace_back(EcsCoreIntern::Entity(Entity_Version(1), maxComponents));
+                index = ++lastEntityIndex;
+                entities[index] = EcsCoreIntern::Entity(Entity_Version(1), maxComponents);
             }
 
             return entities[index].id(index);
@@ -425,7 +427,7 @@ namespace EcsCore {
                 entitySets.push_back(entitySet);
 
                 // add all related Entities
-                for (Entity_Index entityIndex = 1; entityIndex < entities.size(); entityIndex++)
+                for (Entity_Index entityIndex = 1; entityIndex <= lastEntityIndex; entityIndex++)
                     entitySet->dumbAddIfMember(entities[entityIndex].id(entityIndex), entities[entityIndex].getComponentMask());
             }
 
@@ -450,7 +452,7 @@ namespace EcsCore {
         }
 
         uint32 getEntityAmount() {
-            return entities.size() - freeEntityIndices.size() - 1;
+            return lastEntityIndex - freeEntityIndices.size();
         }
 
         template<typename T>
@@ -466,6 +468,7 @@ namespace EcsCore {
 
     private:
         uint32 maxEntities;
+        Entity_Index lastEntityIndex = 0;
         std::vector<EcsCoreIntern::Entity> entities;
 
         std::vector<Entity_Index> freeEntityIndices;
@@ -544,7 +547,7 @@ namespace EcsCore {
 
         inline Entity_Index getIndex(Entity_Id entityId) {
             auto index = static_cast<Entity_Index>(entityId);
-            if (index >= entities.size())
+            if (index > lastEntityIndex)
                 return INVALID;
             if (static_cast<Entity_Version>(entityId >> Entity_Id(32)) != entities[index].version())
                 return INVALID;
