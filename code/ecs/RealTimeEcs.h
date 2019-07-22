@@ -131,6 +131,7 @@ namespace RtEcs {
             eventHandler->registerEvent<T>(eventKey);
         }
 
+        // Makes a variable available via access<TYPE>()
         template<typename T>
         void makeAvailable(T* object) {
             manager->makeAvailable(object);
