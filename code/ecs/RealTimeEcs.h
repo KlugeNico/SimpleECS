@@ -61,11 +61,11 @@ namespace RtEcs {
         }
 
         template<typename T>
-        T* getComponent() {
+        T* getComponent() const {
             return manager->getComponent<T>(entityId);
         }
 
-        EcsCore::Entity_Id getId() {
+        EcsCore::Entity_Id getId() const {
             return entityId;
         }
 
