@@ -207,7 +207,7 @@ namespace RtEcs {
 
     public:
 
-        virtual void update(Entity entity, double delta) = 0;
+        virtual void update(Entity entity, DELTA_TYPE delta) = 0;
 
         void update(DELTA_TYPE delta) override {
             EcsCore::Entity_Id entityId = System::manager->nextEntity(IteratingSystem<Ts...>::setIteratorId);
