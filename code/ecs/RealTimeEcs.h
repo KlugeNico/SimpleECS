@@ -18,16 +18,12 @@ namespace RtEcs {
 
     typedef float DELTA_TYPE;
 
-    typedef EcsCore::uint32 uint32;
-    typedef EcsCore::uint64 uint64;
     typedef EcsCore::Entity_Id Entity_Id;
-
+    typedef EcsCore::Component_Key Component_Key;
     typedef SimpleEH::Event_Key Event_Key;
 
     template<typename T>
     using Listener = SimpleEH::Listener<T>;
-
-    using namespace EcsCore;
 
     class Entity {
 
