@@ -20,6 +20,10 @@ namespace RtEcs {
 
     typedef EcsCore::Entity_Id Entity_Id;
     typedef EcsCore::Component_Key Component_Key;
+
+    using EcsCore::INVALID;
+    using EcsCore::NOT_AVAILABLE;
+
     typedef SimpleEH::Event_Key Event_Key;
 
     template<typename T>

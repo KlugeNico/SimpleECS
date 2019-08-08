@@ -7,8 +7,8 @@ using std::vector;
 
 using namespace RtEcs;
 
-uint32 MAX_ENTITIES = 5000;
-uint32 MAX_COMPONENTS_MANAGER = 50;
+u_int32_t MAX_ENTITIES = 5000;
+u_int32_t MAX_COMPONENTS_MANAGER = 50;
 
 class SomeEvent {};
 class SomeOtherEvent {};

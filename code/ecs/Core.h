@@ -31,7 +31,7 @@ namespace EcsCore {
     typedef std::string Component_Key;
 
     static const uint32 INVALID = 0;
-
+    static const std::nullptr_t NOT_AVAILABLE = nullptr;
 
     namespace EcsCoreIntern {     // private
 
