@@ -33,7 +33,7 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
 
     cout << "Create RtManager" << endl;
 
-    RtManager manager(MAX_ENTITIES, MAX_COMPONENTS_MANAGER);
+    RtManager manager(MAX_ENTITIES);
 
     cout << "register Events" << endl;
 

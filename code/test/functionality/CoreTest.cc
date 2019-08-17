@@ -8,7 +8,7 @@ using std::vector;
 using namespace EcsCore;
 
 uint32 MAX_ENTITIES_RT = 5000;
-uint32 MAX_COMPONENTS_MANAGER_RT = 50;
+const size_t COMPONENT_AMOUNT = 50;
 
 struct Numbered {
     int id;
@@ -26,7 +26,7 @@ struct Size {
 
 TEST (ManagerTest, TestManagerCreate) {
 
-    Manager manager = Manager(MAX_ENTITIES_RT, MAX_COMPONENTS_MANAGER_RT);
+    Manager<COMPONENT_AMOUNT> manager = Manager<COMPONENT_AMOUNT>(MAX_ENTITIES_RT);
 
     std::vector<Entity_Id> entities = vector<Entity_Id>(40);
 

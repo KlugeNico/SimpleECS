@@ -8,7 +8,7 @@ using std::vector;
 using namespace EcsCore;
 using namespace EcsCoreIntern;
 
-uint32 MAX_COMPONENTS = 300;
+const size_t MAX_COMPONENTS = 300;
 
 struct Numbered {
     int id;
@@ -17,7 +17,7 @@ struct Numbered {
 
 TEST (BitsetTest, TestSetBitset) {
 
-    Bitset bitset = Bitset(MAX_COMPONENTS);
+    Bitset<MAX_COMPONENTS> bitset = Bitset<MAX_COMPONENTS>();
 
     cout << "Set Bitset" << endl;
 
@@ -53,8 +53,8 @@ TEST (BitsetTest, TestSetBitset) {
 
 TEST (BitsetTest, TestBitsetContains) {
 
-    Bitset bitsetOne = Bitset(MAX_COMPONENTS);
-    Bitset bitsetTwo = Bitset(MAX_COMPONENTS);
+    Bitset<MAX_COMPONENTS> bitsetOne = Bitset<MAX_COMPONENTS>();
+    Bitset<MAX_COMPONENTS> bitsetTwo = Bitset<MAX_COMPONENTS>();
 
     cout << "Bitset contains Bitset" << endl;
 

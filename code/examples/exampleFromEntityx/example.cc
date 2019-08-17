@@ -428,7 +428,7 @@ private:
 class Application : public RtEcs::RtManager {
 public:
     explicit Application(EcsCore::uint32 maxEntities, EcsCore::uint32 maxComponents, sf::RenderTarget &target,
-                         sf::Font &font) : RtManager(maxEntities, maxComponents) {
+                         sf::Font &font) : RtManager(maxEntities) {
         registerComponent<Body>("Body");
         registerComponent<Particle>("Particle");
         registerComponent<Collideable>("Collideable");

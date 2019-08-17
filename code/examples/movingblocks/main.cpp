@@ -565,7 +565,7 @@ void initSdl() {
 
 void initRtEcs() {
 
-    rtEcs = new RtEcs::RtManager (MAX_ENTITIES, MAX_COMPONENTS);
+    rtEcs = new RtEcs::RtManager(MAX_ENTITIES);
 
     rtEcs->registerComponent<Player>("player");
     rtEcs->registerComponent<Position>("position");

@@ -11,6 +11,8 @@
 #ifndef SIMPLE_ECS_ACCESS_H
 #define SIMPLE_ECS_ACCESS_H
 
+#define COMPONENT_AMOUNT 63
+
 #include "Core.h"
 #include "EventHandler.h"
 
@@ -33,7 +35,7 @@ namespace RtEcs {
 
     public:
 
-        Entity(EcsCore::Manager *manager, EcsCore::Entity_Id entityId)
+        Entity(EcsCore::Manager<COMPONENT_AMOUNT> *manager, EcsCore::Entity_Id entityId)
             : manager(manager), entityId(entityId) {
         }
 
@@ -71,7 +73,7 @@ namespace RtEcs {
 
     private:
         EcsCore::Entity_Id entityId;
-        EcsCore::Manager* manager;
+        EcsCore::Manager<COMPONENT_AMOUNT>* manager;
 
     };
 
@@ -83,7 +85,7 @@ namespace RtEcs {
 
         virtual void update(DELTA_TYPE delta) = 0;
 
-        virtual void init(EcsCore::Manager* pManager, SimpleEH::SimpleEventHandler* pEventHandler) {
+        virtual void init(EcsCore::Manager<COMPONENT_AMOUNT>* pManager, SimpleEH::SimpleEventHandler* pEventHandler) {
             manager = pManager;
             eventHandler = pEventHandler;
         }
@@ -144,7 +146,7 @@ namespace RtEcs {
 
 
     protected:
-        EcsCore::Manager* manager = nullptr;
+        EcsCore::Manager<COMPONENT_AMOUNT>* manager = nullptr;
         SimpleEH::SimpleEventHandler* eventHandler = nullptr;
 
     };
@@ -154,8 +156,8 @@ namespace RtEcs {
 
     public:
 
-        RtManager(EcsCore::uint32 maxEntities, EcsCore::uint32 maxComponents) {
-            manager = new EcsCore::Manager(maxEntities, maxComponents);
+        RtManager(EcsCore::uint32 maxEntities) {
+            manager = new EcsCore::Manager<COMPONENT_AMOUNT>(maxEntities);
             eventHandler = new SimpleEH::SimpleEventHandler();
         }
 
@@ -194,7 +196,7 @@ namespace RtEcs {
     protected:
         EcsCore::SetIterator_Id setIteratorId = 0;
 
-        void init(EcsCore::Manager *pManager, SimpleEH::SimpleEventHandler* eventHandler) override {
+        void init(EcsCore::Manager<COMPONENT_AMOUNT> *pManager, SimpleEH::SimpleEventHandler* eventHandler) override {
             System::init(pManager, eventHandler);
             setIteratorId = manager->createSetIterator<Ts...>();
         }
