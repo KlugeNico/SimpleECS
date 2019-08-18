@@ -32,8 +32,8 @@ TEST (ManagerTest, TestManagerCreate) {
 
     cout << "Create Manager" << endl;
 
-    manager.registerComponent<Position>("p");
-    manager.registerComponent<Size>("s");
+    manager.registerComponent<Position>("p", EcsCore::Storing::POINTER);
+    manager.registerComponent<Size>("s", EcsCore::Storing::VALUE);
 
     SetIterator_Id s1 = manager.createSetIterator<Position, Size>();
     SetIterator_Id s2 = manager.createSetIterator<Position>();

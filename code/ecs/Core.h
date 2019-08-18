@@ -21,7 +21,8 @@
 
 namespace EcsCore {
 
-    //enum Storing { POINTER, VALUE };
+    enum Storing { POINTER, VALUE };
+    static const Storing DEFAULT_STORING = Storing::VALUE;
 
     typedef std::uint32_t uint32;
     typedef std::uint64_t uint64;
@@ -372,7 +373,7 @@ namespace EcsCore {
         }
 
         template<typename T>
-        void registerComponent(Component_Key componentKey) {
+        void registerComponent(Component_Key componentKey, Storing storing = DEFAULT_STORING) {
             getSetComponentHandle<T>(componentKey);
         }
 
@@ -580,14 +581,24 @@ namespace EcsCore {
         }
 
         template<typename T>
-        EcsCoreIntern::ComponentHandle *linkComponentHandle(Component_Key *componentKey) {
+        EcsCoreIntern::ComponentHandle *linkComponentHandle(Component_Key *componentKey, Storing storing) {
             if (componentKey->empty())
                 throw std::invalid_argument("Tried to get unregistered component!");
             if (componentMap[*componentKey] == nullptr) {
-                auto *chp = new EcsCoreIntern::ValuedComponentHandle<T>(
-                        ++lastComponentIndex,
-                        //[](void *x) { delete reinterpret_cast<T *>(x); },
-                        maxEntities);
+                EcsCoreIntern::ComponentHandle* chp;
+                switch (storing) {
+                    case POINTER:
+                        chp = new EcsCoreIntern::PointingComponentHandle(
+                                ++lastComponentIndex,
+                                [](void *x) { delete reinterpret_cast<T *>(x); },
+                                maxEntities);
+                        break;
+                    default:
+                        chp = new EcsCoreIntern::ValuedComponentHandle<T>(
+                                ++lastComponentIndex,
+                                maxEntities);
+                        break;
+                }
                 componentMap[*componentKey] = chp;
                 componentVector[chp->getComponentId()] = chp;
             }
@@ -596,8 +607,8 @@ namespace EcsCore {
         }
 
         template<typename T>
-        EcsCoreIntern::ComponentHandle *getSetComponentHandle(Component_Key componentKey = Component_Key()) {
-            static EcsCoreIntern::ComponentHandle *componentHandle = linkComponentHandle<T>(&componentKey);
+        EcsCoreIntern::ComponentHandle *getSetComponentHandle(Component_Key componentKey = Component_Key(), Storing storing = DEFAULT_STORING) {
+            static EcsCoreIntern::ComponentHandle *componentHandle = linkComponentHandle<T>(&componentKey, storing);
             return componentHandle;
         }
 

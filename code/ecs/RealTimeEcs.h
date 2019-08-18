@@ -25,6 +25,7 @@ namespace RtEcs {
 
     using EcsCore::INVALID;
     using EcsCore::NOT_AVAILABLE;
+    using EcsCore::Storing;
 
     typedef SimpleEH::Event_Key Event_Key;
 
@@ -174,8 +175,8 @@ namespace RtEcs {
         }
 
         template<typename T>
-        void registerComponent(EcsCore::Component_Key key) {
-            manager->registerComponent<T>(key);
+        void registerComponent(EcsCore::Component_Key key, EcsCore::Storing storing = EcsCore::DEFAULT_STORING) {
+            manager->registerComponent<T>(key, storing);
         }
 
         void update(DELTA_TYPE delta) override {
