@@ -13,6 +13,9 @@
 
 #define POW_2_32 4294967296
 
+#define BITSET_TYPE std::uint8_t
+#define BITSET_TYPE_SIZE 8u
+
 #include <unordered_map>
 #include <vector>
 #include <forward_list>
@@ -44,7 +47,7 @@ namespace EcsCore {
 
         public:
             Bitset() {
-                arraySize = (size / 64) + 1;
+                arraySize = (size / BITSET_TYPE_SIZE) + 1;
             }
 
             inline void set(std::vector<uint32> *bits) {
@@ -53,20 +56,20 @@ namespace EcsCore {
             }
 
             inline void set(uint32 bit) {
-                bitset[bit / 64] |= uint64(1) << (bit % 64);
+                bitset[bit / BITSET_TYPE_SIZE] |= BITSET_TYPE(1) << (bit % BITSET_TYPE_SIZE);
             }
 
             inline void unset(uint32 bit) {
-                bitset[bit / 64] &= ~(uint64(1) << (bit % 64));
+                bitset[bit / BITSET_TYPE_SIZE] &= ~(1u << (bit % BITSET_TYPE_SIZE));
             }
 
             inline void reset() {
-                for (uint64 &bitrow : bitset)
+                for (BITSET_TYPE &bitrow : bitset)
                     bitrow = 0;
             }
 
             inline bool isSet(uint32 bit) {
-                return ((bitset[bit / 64] >> (bit % 64)) & uint64(1)) == 1;
+                return ((bitset[bit / BITSET_TYPE_SIZE] >> (bit % BITSET_TYPE_SIZE)) & BITSET_TYPE(1)) == 1;
             }
 
             inline bool contains(Bitset *other) {
@@ -78,7 +81,7 @@ namespace EcsCore {
 
         private:
             size_t arraySize;
-            uint64 bitset[(size / 64) + 1]{};
+            BITSET_TYPE bitset[(size / BITSET_TYPE_SIZE) + 1]{};
 
         };
 
@@ -313,7 +316,7 @@ namespace EcsCore {
     class Manager {
 
     public:
-        Manager(uint32 maxEntities) :
+        explicit Manager(uint32 maxEntities) :
                 maxEntities(maxEntities),
                 componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(C_N + 1)),
                 entities(std::vector<EcsCoreIntern::Entity<C_N>>(maxEntities + 1))  {
