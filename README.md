@@ -1,6 +1,6 @@
 # SimpleECS
 
-A small and simple [Entity Component System](https://en.wikipedia.org/wiki/Entity_component_system) written with CLion in C++ 11.
+A small and simple [Entity Component System](https://en.wikipedia.org/wiki/Entity_component_system) written with CLion in C++ 14.
 
 This project is orientated to the [EntityX Project](https://github.com/alecthomas/entityx).
 
@@ -15,12 +15,9 @@ As far as I understood the code of EntityX, it is designed in a way I, which mak
 - Core API very near to functionality (But there is also a handy wrapper)
 - Registered Components to make usage of Libraries (.dll .so) for mods possible.
 - Systems can be updated over multiple Frames.
-
-### Advantages of EntityX
-
-- Seems to be faster for now. I took the EntityX example (the exploding circles) and changed it to use SimpleECS. I build both with gcc version 6.3.0 on Debian.
+- Seems to be faster for now. At least for the EntityX example (the exploding circles). I build both with gcc version 6.3.0 on Debian.
   - EntityX: 40 fps
-  - SimpleECS: 30 fps.
+  - SimpleECS: 50 fps.
 
 ## Planed Features:
 
@@ -34,7 +31,7 @@ Each used combination of components (usually in Systems) organizes its own list 
 
 ### Component storage
 
-Components are stored in ComponentHandles. The ComponentHandles are containing vectors of pointers to components.
+Components are stored in ComponentHandles. The ComponentHandles are containing the values directly. But it's also possible to store pointers to components instead for big components to save storage.
 
 ## Usage
 
