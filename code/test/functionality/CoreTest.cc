@@ -16,7 +16,7 @@ struct Numbered {
 
 struct Position {
     int x = 0;
-    int y_ = 0;
+    int y = 0;
 };
 
 struct Size {
@@ -50,7 +50,7 @@ TEST (ManagerTest, TestManagerCreate) {
     for (int i = 0; i < 20; i++) {
         ASSERT_TRUE(manager.addComponents(entities[i], Position()));
         manager.getComponent<Position>(entities[i])->x = i * 10;
-        manager.getComponent<Position>(entities[i])->y_ = 10;
+        manager.getComponent<Position>(entities[i])->y = 10;
     }
 
     for (int i = 10; i < 30; i++) {
@@ -58,9 +58,9 @@ TEST (ManagerTest, TestManagerCreate) {
     }
 
     for (int i = 0; i < 20; i++) {
-        auto* position = manager.getComponent<Position>(entities[i]);
+        auto position = manager.getComponent<Position>(entities[i]);
         ASSERT_EQ(position->x, i * 10);
-        ASSERT_EQ(position->y_, 10);
+        ASSERT_EQ(position->y, 10);
     }
 
     for (int i = 20; i < 40; i++) {
