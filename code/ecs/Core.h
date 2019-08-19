@@ -385,11 +385,11 @@ namespace EcsCore {
         }
 
         template <typename T>
-        bool addComponent(Entity_Id entityId, T&& component) {
+        T* addComponent(Entity_Id entityId, T&& component) {
 
             Entity_Index index = getIndex(entityId);
             if (index == INVALID)
-                return false;
+                return nullptr;
 
             EcsCoreIntern::ComponentHandle* ch = getComponentHandle<T>();
 
@@ -403,7 +403,7 @@ namespace EcsCore {
 
             addComponentsToComponentHandles<T>(index, component);
 
-            return true;
+            return getComponent<T>(entityId);
         }
 
         template<typename ... Ts>
