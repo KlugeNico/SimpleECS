@@ -123,13 +123,13 @@ int main() {
     // We add a tree at any x^2 position.
     for (int i = 1; i < MAP_SIZE; i = i * 2) {
         RtEcs::Entity tree = ecs.createEntity();
-        tree.addComponents(new Position(i), new Appearance('T'));
+        tree.addComponents(Position(i), Appearance('T'));
     }
 
     // And a walking letter every 10th position.
     for (int i = 1; i < MAP_SIZE; i += 10) {
         RtEcs::Entity guy = ecs.createEntity();
-        guy.addComponents(new Position(i), new Appearance('A' + i / 10), new Move((float)i / 40));
+        guy.addComponents(Position(i), Appearance('A' + i / 10), Move((float)i / 40));
     }
 
     // Update the system, press enter in the terminal to make next step.

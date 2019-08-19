@@ -578,28 +578,28 @@ void initRtEcs() {
 
     RtEcs::Entity player = rtEcs->createEntity();
 
-    player.addComponent(new Player);
-    player.addComponent(new Position(player.getId(), WORLD_WIDTH * 64, WORLD_HEIGHT * 64));
-    player.addComponent(new Body(20, 0xFF, 0x00, 0x00));
-    player.addComponent(new Perception(PLAYER_VISION));
-    player.addComponent(new Movement(PLAYER_SPEED));
+    player.addComponent(Player());
+    player.addComponent(Position(player.getId(), WORLD_WIDTH * 64, WORLD_HEIGHT * 64));
+    player.addComponent(Body(20, 0xFF, 0x00, 0x00));
+    player.addComponent(Perception(PLAYER_VISION));
+    player.addComponent(Movement(PLAYER_SPEED));
 
     RandomNumberGenerator randX(1, world->pixWidth() - 1);
     RandomNumberGenerator randY(1, world->pixHeight() - 1);
 
     for (int i = 0; i < TREE_SPAWN; i++) {
         RtEcs::Entity tree = rtEcs->createEntity();
-        tree.addComponent(new Position(tree.getId(), randX.get(), randY.get()));
-        tree.addComponent(new Body(20, 32, 128, 16));
+        tree.addComponent(Position(tree.getId(), randX.get(), randY.get()));
+        tree.addComponent(Body(20, 32, 128, 16));
     }
 
     for (int i = 0; i < FOLLOWER_SPAWN; i++) {
         RtEcs::Entity follower = rtEcs->createEntity();
-        follower.addComponent(new Position(follower.getId(), randX.get(), randY.get()));
-        follower.addComponent(new Body(20, 32, 32, 128));
-        follower.addComponent(new Perception(FOLLOWER_PERCEPTION));
-        follower.addComponent(new Movement(PLAYER_SPEED));
-        follower.addComponent(new KI(KI::FOLLOWER));
+        follower.addComponent(Position(follower.getId(), randX.get(), randY.get()));
+        follower.addComponent(Body(20, 32, 32, 128));
+        follower.addComponent(Perception(FOLLOWER_PERCEPTION));
+        follower.addComponent(Movement(PLAYER_SPEED));
+        follower.addComponent(KI(KI::FOLLOWER));
     }
 
     rtEcs->addSystem(new PlayerSystem(player));
