@@ -20,6 +20,7 @@ struct Position {
 };
 
 struct Size {
+    explicit Size(int size) : size(size) {}
     int size = 0;
 };
 
@@ -47,13 +48,13 @@ TEST (ManagerTest, TestManagerCreate) {
     ASSERT_EQ(manager.getEntityAmount(), 40);
 
     for (int i = 0; i < 20; i++) {
-        ASSERT_TRUE(manager.addComponents(entities[i], new Position));
+        ASSERT_TRUE(manager.addComponents(entities[i], Position()));
         manager.getComponent<Position>(entities[i])->x = i * 10;
         manager.getComponent<Position>(entities[i])->y_ = 10;
     }
 
     for (int i = 10; i < 30; i++) {
-        ASSERT_TRUE(manager.addComponents(entities[i], new Size));
+        ASSERT_TRUE(manager.addComponents(entities[i], Size(i)));
     }
 
     for (int i = 0; i < 20; i++) {
@@ -66,16 +67,21 @@ TEST (ManagerTest, TestManagerCreate) {
         ASSERT_TRUE(manager.getComponent<Position>(entities[i]) == nullptr);
     }
 
-    manager.eraseEntity(entities[15]);
-    manager.eraseEntity(entities[16]);
-    manager.eraseEntity(entities[17]);
+    for (int i = 10; i < 30; i++) {
+        auto* size = manager.getComponent<Size>(entities[i]);
+        ASSERT_EQ(size->size, i);
+    }
+
+    manager.eraseEntity(entities[10]);
+    manager.eraseEntity(entities[11]);
+    manager.eraseEntity(entities[12]);
 
     ASSERT_EQ(manager.getEntityAmount(), 37);
 
     ASSERT_TRUE(manager.getComponent<Position>(entities[14]) != nullptr);
-    ASSERT_TRUE(manager.getComponent<Position>(entities[15]) == nullptr);
-    ASSERT_TRUE(manager.getComponent<Position>(entities[16]) == nullptr);
-    ASSERT_TRUE(manager.getComponent<Position>(entities[17]) == nullptr);
+    ASSERT_TRUE(manager.getComponent<Position>(entities[10]) == nullptr);
+    ASSERT_TRUE(manager.getComponent<Position>(entities[11]) == nullptr);
+    ASSERT_TRUE(manager.getComponent<Position>(entities[12]) == nullptr);
 
     uint32 amount = 0;
     while (manager.nextEntity(s1) != INVALID) {
@@ -85,8 +91,8 @@ TEST (ManagerTest, TestManagerCreate) {
 
     SetIterator_Id s3 = manager.createSetIterator<Size>();
 
-    manager.addComponent(manager.createEntity(), new Size);
-    manager.addComponent(manager.createEntity(), new Position);
+    manager.addComponent(manager.createEntity(), Size(1));
+    manager.addComponent(manager.createEntity(), Position());
 
     amount = 0;
     while (manager.nextEntity(s3) != INVALID) {

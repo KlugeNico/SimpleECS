@@ -41,13 +41,13 @@ namespace RtEcs {
         }
 
         template<typename T>
-        bool addComponent(T* component) {
-            manager->addComponent(entityId, component);
+        bool addComponent(T&& component) {
+            manager->addComponent<T>(entityId, std::forward<T>(component));
         }
 
         template<typename ... Ts>
-        bool addComponents(Ts*... components) {
-            manager->addComponents(entityId, components...);
+        bool addComponents(Ts&&... components) {
+            manager->addComponents<Ts...>(entityId, std::forward<Ts>(components)...);
         }
 
         bool erase() {

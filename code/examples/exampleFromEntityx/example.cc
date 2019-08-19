@@ -120,20 +120,20 @@ public:
         for (int i = 0; i < count - c; i++) {
             RtEcs::Entity entity = createEntity();
 
-            // Mark as collideable (explosion particles will not be collideable).
-            auto* collideable = new Collideable(r(10, 5));
+            entity.addComponents(
+                Collideable(r(10, 5)),
+                Body(sf::Vector2f(r(size.x), r(size.y)),sf::Vector2f(r(100, -50), r(100, -50)))
+            );
 
-            // "Physical" attributes.
-            auto* body = new Body(
-                    sf::Vector2f(r(size.x), r(size.y)),
-                    sf::Vector2f(r(100, -50), r(100, -50)));
+            auto* collideable = entity.getComponent<Collideable>();
 
             // Shape to apply to entity.
             Renderable shape(new sf::CircleShape(collideable->radius));
             shape->setFillColor(sf::Color(r(128, 127), r(128, 127), r(128, 127), 0));
             shape->setOrigin(collideable->radius, collideable->radius);
 
-            entity.addComponents(collideable, body, new Renderable(shape));
+            entity.addComponent(Renderable(shape));
+
         }
     }
 
@@ -355,11 +355,11 @@ public:
             float angle = r(360) * M_PI / 180.0;
 
             particle.addComponents(
-                    new Body(
+                    Body(
                         body->position + sf::Vector2f(offset * cos(angle), offset * sin(angle)),
                         body->direction + sf::Vector2f(offset * 2 * cos(angle), offset * 2 * sin(angle)),
                         rotationd),
-                    new Particle(colour, radius, radius / 2));
+                    Particle(colour, radius, radius / 2));
         }
     }
 
@@ -372,6 +372,7 @@ public:
 
 private:
     std::unordered_set<EcsCore::Entity_Id> collided;
+
 };
 
 
