@@ -43,7 +43,6 @@
 
 #include <cmath>
 #include <unordered_set>
-#include <sstream>
 #include <cstdlib>
 #include <memory>
 #include <string>
@@ -363,11 +362,11 @@ public:
         }
     }
 
-    void receive(CollisionEvent* collisionEvent) override {
+    void receive(const CollisionEvent& collisionEvent) override {
         // Events are immutable, so we can't destroy the entities here. We defer
         // the work until the update loop.
-        collided.insert(collisionEvent->left);
-        collided.insert(collisionEvent->right);
+        collided.insert(collisionEvent.left);
+        collided.insert(collisionEvent.right);
     }
 
 private:

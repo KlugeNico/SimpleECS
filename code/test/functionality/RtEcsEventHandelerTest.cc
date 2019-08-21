@@ -18,12 +18,12 @@ class SomeReceiver : public Listener <SomeEvent>, public Listener <SomeOtherEven
 public:
     int amountReceived = 0;
 
-    void  receive(SomeEvent* event) override {
+    void  receive(const SomeEvent& event) override {
         amountReceived++;
         cout << "SomeEvent received! Nr. " << amountReceived << endl;
     };
 
-    void  receive(SomeOtherEvent* event) override {
+    void  receive(const SomeOtherEvent& event) override {
         amountReceived++;
         cout << "SomeOtherEvent received! Nr. " << amountReceived << endl;
     };

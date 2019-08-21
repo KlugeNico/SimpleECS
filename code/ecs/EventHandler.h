@@ -18,35 +18,35 @@ namespace SimpleEH {
     template<typename T>
     class Listener {
     public:
-        virtual void receive(T* event) = 0;
+        virtual void receive(const T& event) = 0;
     };
 
     class SimpleEventHandler {
 
     public:
         template<typename T>
-        void subscribe(Listener<T>* listener) {
-            list<T>().push_back(listener);
+        void subscribeEvent(Listener<T>* listener) {
+            getReceiverList<T>().push_back(listener);
         }
 
         template<typename T>
-        void unsubscribe(Listener<T>* toRemove) {
-            std::vector<void*>& v = list<T>();
+        void unsubscribeEvent(Listener<T>* toRemove) {
+            std::vector<void*>& v = getReceiverList<T>();
             v.erase(std::remove(v.begin(), v.end(), toRemove), v.end());
         }
 
         template<typename T>
-        void emit(T& event) {
-            std::vector<void*>& rList = list<T>();
+        void emitEvent(const T& event) {
+            std::vector<void*>& rList = getReceiverList<T>();
             for (void* p : rList) {
                 Listener<T>& receiver = *reinterpret_cast<Listener<T>*>(p);
-                receiver.receive(&event);
+                receiver.receive(event);
             }
         }
 
         template<typename T>
         void registerEvent(const Event_Key& eventKey) {
-            list<T>(eventKey);
+            getReceiverList<T>(eventKey);
         }
 
     private:
@@ -54,7 +54,7 @@ namespace SimpleEH {
         std::unordered_map<Event_Key, uint32_t> receiverListsIdMap;
 
         template<typename T>
-        std::vector<void*>& list(const Event_Key& eventKey = Event_Key()) {
+        std::vector<void*>& getReceiverList(const Event_Key& eventKey = Event_Key()) {
             static uint32_t id = linkReceiverList(eventKey);
             return receiverLists[id];
         }
