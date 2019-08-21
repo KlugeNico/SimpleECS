@@ -23,6 +23,7 @@
 #include <cstring>
 #include <sstream>
 #include <typeinfo>
+#include "EventHandler.h"
 
 namespace EcsCore {
 
@@ -245,7 +246,8 @@ namespace EcsCore {
             // only defined behavior for valid requests (entity and component exists)
             virtual void destroyComponent(Entity_Index entityIndex) = 0;
 
-            Bitset<7> listeners;
+            bool createListenerNotEmpty = false;
+            bool destroyListenerNotEmpty = false;
 
         private:
             Component_Id id;
@@ -509,7 +511,7 @@ namespace EcsCore {
             return static_cast<SetIterator_Id>(setIterators.size() - 1);
         }
 
-        Entity_Id nextEntity(SetIterator_Id setIteratorId) {
+        inline Entity_Id nextEntity(SetIterator_Id setIteratorId) {
             Entity_Index nextIndex = setIterators[setIteratorId]->next();
             return entities[nextIndex].id(nextIndex);
         }
@@ -525,20 +527,39 @@ namespace EcsCore {
             return setIterators[setIteratorId]->getEntitySet()->getVagueAmount();
         }
 
-        uint32 getEntityAmount() {
+        inline uint32 getEntityAmount() {
             return lastEntityIndex - freeEntityIndices.size();
         }
 
         template<typename T>
-        void makeAvailable(T* object) {
+        inline void makeAvailable(T* object) {
             getSetSingleton(object);
         }
 
         template<typename T>
-        T* access() {
+        inline T* access() {
             return getSetSingleton<T>();
         }
 
+        template<typename T>
+        inline void emitEvent(T& event) {
+            eventHandler.emit(event);
+        }
+
+        template<typename T>
+        inline void subscribeEvent(SimpleEH::Listener<T>* listener) {
+            eventHandler.subscribe<T>(listener);
+        }
+
+        template<typename T>
+        inline void unsubscribeEvent(SimpleEH::Listener<T>* listener) {
+            eventHandler.unsubscribe<T>(listener);
+        }
+
+        template<typename T>
+        inline void registerEvent(SimpleEH::Event_Key eventKey) {
+            eventHandler.registerEvent<T>(eventKey);
+        }
 
     private:
         uint32 maxEntities;
@@ -553,6 +574,8 @@ namespace EcsCore {
 
         std::vector<EcsCoreIntern::EntitySet<C_N> *> entitySets;
         std::vector<EcsCoreIntern::SetIterator<C_N> *> setIterators;
+
+        SimpleEH::SimpleEventHandler eventHandler;
 
         template<typename T>
         Component_Id getComponentId() {

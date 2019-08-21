@@ -26,54 +26,47 @@ namespace SimpleEH {
     public:
         template<typename T>
         void subscribe(Listener<T>* listener) {
-            list<T>()->push_back(listener);
+            list<T>().push_back(listener);
         }
 
         template<typename T>
-        bool unsubscribe(Listener<T>* toRemove) {
-            std::vector<Listener<T>*>* rList = list<T>();
-            for (int i = 0; i < rList->size(); i++) {
-                if ((*rList)[i] == toRemove) {
-                    (*rList)[i] = (*rList)[rList->size() - 1];
-                    rList->pop_back();
-                    return true;
-                }
-            }
-            return false;
+        void unsubscribe(Listener<T>* toRemove) {
+            std::vector<void*>& v = list<T>();
+            v.erase(std::remove(v.begin(), v.end(), toRemove), v.end());
         }
 
         template<typename T>
         void emit(T& event) {
-            std::vector<Listener<T>*>* rList = list<T>();
-            for (int i = 0; i < rList->size(); i++) {
-                (*rList)[i]->receive(&event);
+            std::vector<void*>& rList = list<T>();
+            for (void* p : rList) {
+                Listener<T>& receiver = *reinterpret_cast<Listener<T>*>(p);
+                receiver.receive(&event);
             }
         }
 
         template<typename T>
-        void registerEvent(Event_Key eventKey) {
+        void registerEvent(const Event_Key& eventKey) {
             list<T>(eventKey);
         }
 
     private:
-        std::unordered_map<Event_Key, void*> receiverLists;
+        std::vector<std::vector<void*>> receiverLists;
+        std::unordered_map<Event_Key, uint32_t> receiverListsIdMap;
 
         template<typename T>
-        std::vector<Listener<T>*>* list(Event_Key eventKey = Event_Key()) {
-            static std::vector<Listener<T>*>* receiverList = linkReceiverList<T>(&eventKey);
-            return receiverList;
+        std::vector<void*>& list(const Event_Key& eventKey = Event_Key()) {
+            static uint32_t id = linkReceiverList(eventKey);
+            return receiverLists[id];
         }
 
-        template<typename T>
-        std::vector<Listener<T>*>* linkReceiverList(Event_Key *eventKey) {
-            if (eventKey->empty())
+        uint32_t linkReceiverList(const Event_Key& eventKey) {
+            if (eventKey.empty())
                 throw std::invalid_argument("Tried to use unregistered event!");
-            if (receiverLists[*eventKey] == nullptr) {
-                auto *listPointer = new std::vector<Listener<T>*>;
-                receiverLists[*eventKey] = reinterpret_cast<void *>(listPointer);
+            if (!receiverListsIdMap.count(eventKey)) {     // Eventtype doesn't exist yet
+                receiverListsIdMap[eventKey] = receiverLists.size();
+                receiverLists.emplace_back();
             }
-            auto *listPointer = reinterpret_cast<std::vector<Listener<T>*>*>(receiverLists[*eventKey]);
-            return listPointer;
+            return receiverListsIdMap[eventKey];
         }
 
     };

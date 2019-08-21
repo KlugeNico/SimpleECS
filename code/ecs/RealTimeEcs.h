@@ -86,9 +86,8 @@ namespace RtEcs {
 
         virtual void update(DELTA_TYPE delta) = 0;
 
-        virtual void init(EcsCore::Manager<COMPONENT_AMOUNT>* pManager, SimpleEH::SimpleEventHandler* pEventHandler) {
+        virtual void init(EcsCore::Manager<COMPONENT_AMOUNT>* pManager) {
             manager = pManager;
-            eventHandler = pEventHandler;
         }
 
         Entity getEntity(EcsCore::Entity_Id entityId) {
@@ -116,22 +115,22 @@ namespace RtEcs {
 
         template<typename T>
         void emitEvent(T& event) {
-            eventHandler->emit(event);
+            manager->emitEvent(event);
         }
 
         template<typename T>
         void subscribeEvent(SimpleEH::Listener<T>* listener) {
-            eventHandler->subscribe<T>(listener);
+            manager->subscribeEvent<T>(listener);
         }
 
         template<typename T>
-        bool unsubscribeEvent(SimpleEH::Listener<T>* listener) {
-            return eventHandler->unsubscribe<T>(listener);
+        void unsubscribeEvent(SimpleEH::Listener<T>* listener) {
+            manager->unsubscribeEvent<T>(listener);
         }
 
         template<typename T>
         void registerEvent(Event_Key eventKey) {
-            eventHandler->registerEvent<T>(eventKey);
+            manager->registerEvent<T>(eventKey);
         }
 
         // Makes a variable available via access<TYPE>()
@@ -145,10 +144,8 @@ namespace RtEcs {
             manager->access<T>();
         }
 
-
     protected:
         EcsCore::Manager<COMPONENT_AMOUNT>* manager = nullptr;
-        SimpleEH::SimpleEventHandler* eventHandler = nullptr;
 
     };
 
@@ -157,20 +154,18 @@ namespace RtEcs {
 
     public:
 
-        RtManager(EcsCore::uint32 maxEntities) {
+        explicit RtManager(EcsCore::uint32 maxEntities) {
             manager = new EcsCore::Manager<COMPONENT_AMOUNT>(maxEntities);
-            eventHandler = new SimpleEH::SimpleEventHandler();
         }
 
         ~RtManager() override {
             delete manager;
-            delete eventHandler;
             for (System* system : systems)
                 delete system;
         }
 
         void addSystem(System* system) {
-            system->init(manager, eventHandler);
+            system->init(manager);
             systems.push_back(system);
         }
 
@@ -197,8 +192,8 @@ namespace RtEcs {
     protected:
         EcsCore::SetIterator_Id setIteratorId = 0;
 
-        void init(EcsCore::Manager<COMPONENT_AMOUNT> *pManager, SimpleEH::SimpleEventHandler* eventHandler) override {
-            System::init(pManager, eventHandler);
+        void init(EcsCore::Manager<COMPONENT_AMOUNT> *pManager) override {
+            System::init(pManager);
             setIteratorId = manager->createSetIterator<Ts...>();
         }
 
