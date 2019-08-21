@@ -20,12 +20,17 @@ namespace RtEcs {
 
     typedef float DELTA_TYPE;
 
-    typedef EcsCore::Entity_Id Entity_Id;
-    typedef EcsCore::Component_Key Component_Key;
+    using EcsCore::Entity_Id;
+    using EcsCore::Component_Key;
 
     using EcsCore::INVALID;
     using EcsCore::NOT_AVAILABLE;
     using EcsCore::Storing;
+
+    using EcsCore::ComponentAddedEvent;
+    using EcsCore::ComponentDeletedEvent;
+    using EcsCore::EntityCreatedEvent;
+    using EcsCore::EntityErasedEvent;
 
     typedef SimpleEH::Event_Key Event_Key;
 
@@ -154,12 +159,12 @@ namespace RtEcs {
 
     public:
 
-        explicit RtManager(EcsCore::uint32 maxEntities) {
-            manager = new EcsCore::Manager<COMPONENT_AMOUNT>(maxEntities);
+        explicit RtManager(EcsCore::uint32 maxEntities) : managerObject(maxEntities) {
+            managerObject.initLocal();
+            manager = &managerObject;
         }
 
         ~RtManager() override {
-            delete manager;
             for (System* system : systems)
                 delete system;
         }
@@ -182,6 +187,7 @@ namespace RtEcs {
 
     private:
         std::vector<System*> systems;
+        EcsCore::Manager<COMPONENT_AMOUNT> managerObject;
 
     };
 

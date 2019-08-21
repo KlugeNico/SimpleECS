@@ -61,8 +61,10 @@ struct C10 {
 
 class BenchmarkFixture : public ::testing::Test {
 protected:
-    BenchmarkFixture() : manager(Manager(COUNT, 64)) {}
-    Manager manager;
+    BenchmarkFixture() : manager(Manager<63>(COUNT)) {
+        manager.initLocal();
+    }
+    Manager<63> manager;
 };
 
 
@@ -140,7 +142,7 @@ TEST_F(BenchmarkFixture, TestEntityIteration) {
 
     for (int i = 0; i < count; i++) {
         auto e = manager.createEntity();
-        manager.addComponents<Position>(e, new Position());
+        manager.addComponents<Position>(e, Position());
         entities.push_back(e);
     }
 
@@ -160,8 +162,8 @@ TEST_F(BenchmarkFixture, TestEntityIterationUnpackTwo) {
 
     for (int i = 0; i < count; i++) {
         auto e = manager.createEntity();
-        manager.addComponents<Position>(e, new Position());
-        manager.addComponents<Direction>(e, new Direction());
+        manager.addComponents<Position>(e, Position());
+        manager.addComponents<Direction>(e, Direction());
         entities.push_back(e);
     }
 
@@ -190,8 +192,8 @@ TEST_F(BenchmarkFixture, TestEntityIterationUnpackTen) {
 
     for (int i = 0; i < count; i++) {
         auto e = manager.createEntity();
-        manager.addComponents<Position>(e, new Position());
-        manager.addComponents<Direction>(e, new Direction());
+        manager.addComponents<Position>(e, Position());
+        manager.addComponents<Direction>(e, Direction());
         manager.addComponents(e, new C3());
         manager.addComponents(e, new C4());
         manager.addComponents(e, new C5());

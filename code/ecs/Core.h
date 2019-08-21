@@ -45,13 +45,23 @@ namespace EcsCore {
 
     template <typename T>
     struct ComponentAddedEvent {
-        explicit ComponentAddedEvent (Entity_Id entityId) : entityId(entityId) {}
+        explicit ComponentAddedEvent (const Entity_Id& entityId) : entityId(entityId) {}
         Entity_Id entityId;
     };
 
     template <typename T>
     struct ComponentDeletedEvent {
-        explicit ComponentDeletedEvent (Entity_Id entityId) : entityId(entityId) {}
+        explicit ComponentDeletedEvent (const Entity_Id& entityId) : entityId(entityId) {}
+        Entity_Id entityId;
+    };
+
+    struct EntityCreatedEvent {
+        explicit EntityCreatedEvent (const Entity_Id& entityId) : entityId(entityId) {}
+        Entity_Id entityId;
+    };
+
+    struct EntityErasedEvent {
+        explicit EntityErasedEvent (const Entity_Id& entityId) : entityId(entityId) {}
         Entity_Id entityId;
     };
 
@@ -343,13 +353,13 @@ namespace EcsCore {
 
 
     template<size_t c_n>
-    class Manager {
+    class Manager : public SimpleEH::SimpleEventHandler {
 
     public:
         explicit Manager(uint32 maxEntities) :
                 maxEntities(maxEntities),
                 componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(c_n + 1)),
-                entities(std::vector<EcsCoreIntern::Entity<c_n>>(maxEntities + 1))  {
+                entities(std::vector<EcsCoreIntern::Entity<c_n>>(maxEntities + 1)) {
             entities[0] = EcsCoreIntern::Entity<c_n>();
         }
 
@@ -357,6 +367,11 @@ namespace EcsCore {
             for (EcsCoreIntern::ComponentHandle *ch : componentVector) delete ch;
             for (EcsCoreIntern::EntitySet<c_n> *set : entitySets) delete set;
             for (EcsCoreIntern::SetIterator<c_n> *setIterator : setIterators) delete setIterator;
+        }
+
+        void initLocal() {
+            registerEvent<EntityCreatedEvent>("EcsCore::EntityCreatedEvent&?!");
+            registerEvent<EntityErasedEvent>("EcsCore::EntityErasedEvent&?!");
         }
 
         uint32 getMaxEntities() {
@@ -379,7 +394,11 @@ namespace EcsCore {
                 entities[index] = EcsCoreIntern::Entity<c_n>(Entity_Version(1));
             }
 
-            return entities[index].id(index);
+            Entity_Id entityId = entities[index].id(index);
+
+            emitEvent(EntityCreatedEvent(entityId));
+
+            return entityId;
         }
 
         bool isValid(Entity_Id entityId) {
@@ -392,12 +411,14 @@ namespace EcsCore {
             if (index == INVALID)
                 return false;
 
+            emitEvent(EntityErasedEvent(entityId));
+
             EcsCoreIntern::Bitset<c_n> originally = *entities[index].getComponentMask();
 
             for (Component_Id i = 1; i <= lastComponentIndex; i++) {
                 EcsCoreIntern::ComponentHandle *ch = componentVector[i];
                 if (originally.isSet(ch->getComponentId())) {   // Only delete existing components
-                    ch->destroyComponent(entityId, index, eventHandler);
+                    ch->destroyComponent(entityId, index, *this);
                 }
             }
 
@@ -412,10 +433,9 @@ namespace EcsCore {
         template<typename T>
         void registerComponent(Component_Key componentKey, Storing storing = DEFAULT_STORING) {
             getSetComponentHandle<T>(componentKey, storing);
-            std::ostringstream oss;
-            oss << componentKey << "AddedEvent&?!";
+            std::ostringstream oss; oss << componentKey << "AddedEvent&?!";
             registerEvent<ComponentAddedEvent<T>>(oss.str());
-            oss << componentKey << "DeletedEvent&?!";
+            oss.str(""); oss << componentKey << "DeletedEvent&?!";
             registerEvent<ComponentDeletedEvent<T>>(oss.str());
         }
 
@@ -433,7 +453,7 @@ namespace EcsCore {
                 entities[index].getComponentMask()->set(getComponentId<T>());
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
             } else {
-                ch->destroyComponent(entityId, index, eventHandler);
+                ch->destroyComponent(entityId, index, *this);
             }
 
             addComponentsToComponentHandles<T>(index, component);
@@ -456,7 +476,7 @@ namespace EcsCore {
             bool modified = false;
             for (EcsCoreIntern::ComponentHandle* ch : chs)
                 if (originally.isSet(ch->getComponentId()))
-                    ch->destroyComponent(entityId, index, eventHandler);
+                    ch->destroyComponent(entityId, index, *this);
                 else
                     modified = true;
 
@@ -499,7 +519,7 @@ namespace EcsCore {
             EcsCoreIntern::Bitset<c_n> originally = *entities[index].getComponentMask();
 
             if (originally.isSet(ch->getComponentId())) {
-                ch->destroyComponent(entityId, index, eventHandler);
+                ch->destroyComponent(entityId, index, *this);
                 entities[index].getComponentMask()->unset(getComponentHandle<T>()->getComponentId());
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
                 return true;
@@ -567,26 +587,6 @@ namespace EcsCore {
             return getSetSingleton<S_T>();
         }
 
-        template<typename E_T>
-        inline void emitEvent(const E_T& event) {
-            eventHandler.emitEvent(event);
-        }
-
-        template<typename E_T>
-        inline void subscribeEvent(SimpleEH::Listener<E_T>* listener) {
-            eventHandler.subscribeEvent<E_T>(listener);
-        }
-
-        template<typename E_T>
-        inline void unsubscribeEvent(SimpleEH::Listener<E_T>* listener) {
-            eventHandler.unsubscribeEvent<E_T>(listener);
-        }
-
-        template<typename E_T>
-        inline void registerEvent(SimpleEH::Event_Key eventKey) {
-            eventHandler.registerEvent<E_T>(eventKey);
-        }
-
     private:
         uint32 maxEntities;
         Entity_Index lastEntityIndex = 0;
@@ -600,8 +600,6 @@ namespace EcsCore {
 
         std::vector<EcsCoreIntern::EntitySet<c_n> *> entitySets;
         std::vector<EcsCoreIntern::SetIterator<c_n> *> setIterators;
-
-        SimpleEH::SimpleEventHandler eventHandler;
 
         template<typename T>
         Component_Id getComponentId() {

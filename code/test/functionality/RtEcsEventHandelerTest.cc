@@ -1,3 +1,4 @@
+#include <thread>
 #include "../../ecs/RealTimeEcs.h"
 #include "gtest/gtest.h"
 
@@ -14,19 +15,56 @@ class SomeEvent {};
 class SomeOtherEvent {};
 class WrongEvent {};
 
-class SomeReceiver : public Listener <SomeEvent>, public Listener <SomeOtherEvent> {
+struct SomeComponent {
+    int x;
+};
+
+class SomeReceiver :
+        public Listener <SomeEvent>,
+        public Listener <SomeOtherEvent>,
+        public Listener <RtEcs::ComponentAddedEvent<SomeComponent>>,
+        public Listener <RtEcs::ComponentDeletedEvent<SomeComponent>>,
+        public Listener <RtEcs::EntityCreatedEvent>,
+        public Listener <RtEcs::EntityErasedEvent> {
+
 public:
-    int amountReceived = 0;
+    int someEventReceived = 0;
+    int someOtherEventReceived = 0;
+    int compAddedReceived = 0;
+    int compDeletedReceived = 0;
+    int entityCreated = 0;
+    int entityErased = 0;
 
     void  receive(const SomeEvent& event) override {
-        amountReceived++;
-        cout << "SomeEvent received! Nr. " << amountReceived << endl;
+        someEventReceived++;
+        cout << "SomeEvent received! Nr. " << someEventReceived << endl;
     };
 
     void  receive(const SomeOtherEvent& event) override {
-        amountReceived++;
-        cout << "SomeOtherEvent received! Nr. " << amountReceived << endl;
+        someOtherEventReceived++;
+        cout << "SomeOtherEvent received! Nr. " << someOtherEventReceived << endl;
     };
+
+    void  receive(const RtEcs::ComponentAddedEvent<SomeComponent>& event) override {
+        compAddedReceived++;
+        cout << "SomeComponent added! Nr. " << compAddedReceived << endl;
+    };
+
+    void  receive(const RtEcs::ComponentDeletedEvent<SomeComponent>& event) override {
+        compDeletedReceived++;
+        cout << "SomeComponent deleted! Nr. " << compDeletedReceived << endl;
+    };
+
+    void  receive(const RtEcs::EntityCreatedEvent& event) override {
+        entityCreated++;
+        cout << "Entity created! Nr. " << compAddedReceived << endl;
+    };
+
+    void  receive(const RtEcs::EntityErasedEvent& event) override {
+        entityErased++;
+        cout << "Entity erased! Nr. " << compDeletedReceived << endl;
+    };
+
 };
 
 TEST (RtManagerTest, TestRtManagerEventHandler) {
@@ -47,7 +85,14 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
     manager.subscribeEvent<SomeEvent>(&receiver);
     manager.subscribeEvent<SomeOtherEvent>(&receiver);
 
-    ASSERT_EQ(receiver.amountReceived, 0);
+    manager.registerComponent<SomeComponent>("comp");
+
+    manager.subscribeEvent<RtEcs::ComponentAddedEvent<SomeComponent>>(&receiver);
+    manager.subscribeEvent<RtEcs::ComponentDeletedEvent<SomeComponent>>(&receiver);
+    manager.subscribeEvent<RtEcs::EntityCreatedEvent>(&receiver);
+    manager.subscribeEvent<RtEcs::EntityErasedEvent>(&receiver);
+
+    ASSERT_EQ(receiver.someEventReceived, 0);
 
     SomeEvent someEvent = SomeEvent();
     manager.emitEvent(someEvent);
@@ -58,11 +103,39 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
     WrongEvent wrongEvent = WrongEvent();
     manager.emitEvent(wrongEvent);
 
-    ASSERT_EQ(receiver.amountReceived, 2);
+    ASSERT_EQ(receiver.someEventReceived, 1);
+    ASSERT_EQ(receiver.someOtherEventReceived, 1);
 
     manager.unsubscribeEvent<SomeEvent>(&receiver);
     manager.emitEvent(someEvent);
 
-    ASSERT_EQ(receiver.amountReceived, 2);
+    ASSERT_EQ(receiver.someEventReceived, 1);
+
+    ASSERT_EQ(receiver.entityCreated, 0);
+    Entity entity = manager.createEntity();
+    ASSERT_EQ(receiver.entityCreated, 1);
+
+    entity.addComponent(SomeComponent());
+    ASSERT_EQ(receiver.compAddedReceived, 1);
+
+    entity.addComponent(SomeComponent());
+    ASSERT_EQ(receiver.compAddedReceived, 2);
+    ASSERT_EQ(receiver.compDeletedReceived, 1);
+
+    entity.deleteComponent<SomeComponent>();
+    ASSERT_EQ(receiver.compDeletedReceived, 2);
+
+    entity.addComponent(SomeComponent());   // + 1
+    ASSERT_EQ(receiver.compAddedReceived, 3);
+
+    ASSERT_EQ(receiver.entityErased, 0);
+    entity.erase();
+    ASSERT_EQ(receiver.compDeletedReceived, 3);
+    ASSERT_EQ(receiver.entityErased, 1);
+
+    ASSERT_EQ(receiver.someEventReceived, 1);
+    ASSERT_EQ(receiver.someOtherEventReceived, 1);
+    ASSERT_EQ(receiver.compAddedReceived, 3);
+    ASSERT_EQ(receiver.entityCreated, 1);
 
 }

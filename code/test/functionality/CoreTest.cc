@@ -1,3 +1,4 @@
+#include <thread>
 #include "../../ecs/Core.h"
 #include "gtest/gtest.h"
 
@@ -28,6 +29,7 @@ struct Size {
 TEST (ManagerTest, TestManagerCreate) {
 
     Manager<COMPONENT_AMOUNT> manager = Manager<COMPONENT_AMOUNT>(MAX_ENTITIES_RT);
+    manager.initLocal();
 
     std::vector<Entity_Id> entities = vector<Entity_Id>(40);
 
