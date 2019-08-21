@@ -245,18 +245,21 @@ namespace EcsCore {
             // only defined behavior for valid requests (entity and component exists)
             virtual void destroyComponent(Entity_Index entityIndex) = 0;
 
+            Bitset<7> listeners;
+
         private:
             Component_Id id;
 
         };
 
 
-        template<typename T>
         class PointingComponentHandle : public ComponentHandle {
 
         public:
-            explicit PointingComponentHandle(Component_Id id, uint32 maxEntities) :
+            explicit PointingComponentHandle(Component_Id id, size_t typeSize, void(*deleteFunc)(void *), uint32 maxEntities) :
                     ComponentHandle(id),
+                    typeSize(typeSize),
+                    deleteFunc(deleteFunc),
                     components(std::vector<void *>(maxEntities + 1)) {}
 
             ~PointingComponentHandle() override {
@@ -268,43 +271,47 @@ namespace EcsCore {
             }
 
             void* createComponent(Entity_Index entityIndex) override {
-                return components[entityIndex] = malloc(sizeof(T));
+                return components[entityIndex] = malloc(typeSize);
             }
 
             void destroyComponent(Entity_Index entityIndex) override {
-                delete reinterpret_cast<T*>(components[entityIndex]);
+                deleteFunc(getComponent(entityIndex));
                 components[entityIndex] = nullptr;
             }
 
         private:
+            void (*deleteFunc)(void *);
+            size_t typeSize;
             std::vector<void *> components;
 
         };
 
 
-        template<typename T>
         class ValuedComponentHandle : public ComponentHandle {
 
         public:
-            explicit ValuedComponentHandle(Component_Id id, uint32 maxEntities) :
-                    ComponentHandle(id) {
-                data = std::vector<char>((maxEntities + 1) * sizeof(T));
+            explicit ValuedComponentHandle(Component_Id id, size_t typeSize, void(*destroy)(void *), uint32 maxEntities) :
+                    ComponentHandle(id),
+                    typeSize(typeSize),
+                    destroy(destroy) {
+                data = std::vector<char>((maxEntities + 1) * typeSize);
             }
 
             void* getComponent(Entity_Index entityIndex) override {
-                return &data[entityIndex * sizeof(T)];
+                return &data[entityIndex * typeSize];
             }
 
             void* createComponent(Entity_Index entityIndex) override {
-                return &data[entityIndex * sizeof(T)];
+                return &data[entityIndex * typeSize];
             }
 
             void destroyComponent(Entity_Index entityIndex) override {
-                T* p = reinterpret_cast<T*> (&data[entityIndex * sizeof(T)]);
-                p->~T();
+                destroy(getComponent(entityIndex));
             }
 
         private:
+            void (*destroy)(void *);
+            size_t typeSize;
             std::vector<char> data;
 
         };
@@ -392,8 +399,8 @@ namespace EcsCore {
                 return nullptr;
 
             EcsCoreIntern::ComponentHandle* ch = getComponentHandle<T>();
-
             EcsCoreIntern::Bitset<C_N> originally = *entities[index].getComponentMask();
+
             if (!originally.isSet(ch->getComponentId())) {   // Only update if component type is new for entity
                 entities[index].getComponentMask()->set(getComponentId<T>());
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
@@ -601,13 +608,17 @@ namespace EcsCore {
                 EcsCoreIntern::ComponentHandle* chp;
                 switch (storing) {
                     case POINTER:
-                        chp = new EcsCoreIntern::PointingComponentHandle<T>(
+                        chp = new EcsCoreIntern::PointingComponentHandle(
                                 ++lastComponentIndex,
+                                sizeof(T),
+                                [](void *x) { delete reinterpret_cast<T *>(x); },
                                 maxEntities);
                         break;
                     default:
-                        chp = new EcsCoreIntern::ValuedComponentHandle<T>(
+                        chp = new EcsCoreIntern::ValuedComponentHandle(
                                 ++lastComponentIndex,
+                                sizeof(T),
+                                [](void *x) { reinterpret_cast<T *>(x)->~T(); },
                                 maxEntities);
                         break;
                 }
