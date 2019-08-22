@@ -354,8 +354,6 @@ namespace EcsCore {
 
     }      // end private
 
-    class Manager;
-    static Manager* instance;
 
     class Manager : public SimpleEH::SimpleEventHandler {
 
@@ -365,10 +363,6 @@ namespace EcsCore {
                 entities(std::vector<EcsCoreIntern::Entity>(MAX_ENTITY_AMOUNT + 1)) {
             entities[0] = EcsCoreIntern::Entity();
 
-            if (instance)
-                throw std::invalid_argument("Manager meant to be a Singleton. Only one instance allowed!");
-            instance = this;
-
             initLocal();
         }
 
@@ -376,12 +370,11 @@ namespace EcsCore {
             for (EcsCoreIntern::ComponentHandle *ch : componentVector) delete ch;
             for (EcsCoreIntern::EntitySet *set : entitySets) delete set;
             for (EcsCoreIntern::SetIterator *setIterator : setIterators) delete setIterator;
-            for (EcsCoreIntern::ComponentHandle* (*func) (const Component_Key*, Storing)
+            for (EcsCoreIntern::ComponentHandle* (*func) (Manager*, const Component_Key*, Storing)
                     : getSetComponentHandleFuncList) {
                 Component_Key resetCode(ECS_RESET_CODE);
-                func(&resetCode, DEFAULT_STORING);
+                func(this, &resetCode, DEFAULT_STORING);
             }
-            instance = nullptr;
         }
 
         void initLocal() {
@@ -439,7 +432,7 @@ namespace EcsCore {
 
         template<typename T>
         void registerComponent(Component_Key componentKey, Storing storing = DEFAULT_STORING) {
-            getSetComponentHandle<T>(&componentKey, storing);
+            getSetComponentHandle<T>(this, &componentKey, storing);
             std::ostringstream oss; oss << componentKey << "AddedEvent&?!";
             registerEvent<ComponentAddedEvent<T>>(oss.str());
             oss.str(""); oss << componentKey << "DeletedEvent&?!";
@@ -453,7 +446,7 @@ namespace EcsCore {
             if (index == INVALID)
                 return nullptr;
 
-            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>();
+            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>(this, nullptr, VALUE);
             EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
 
             if (!originally.isSet(ch->getComponentId())) {   // Only update if component type is new for entity
@@ -507,7 +500,7 @@ namespace EcsCore {
             if (index == INVALID)
                 return nullptr;
 
-            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>();
+            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>(this, nullptr, VALUE);
 
             if (entities[index].getComponentMask()->isSet(ch->getComponentId()))
                 return reinterpret_cast<T *>(ch->getComponent(index));
@@ -522,12 +515,12 @@ namespace EcsCore {
             if (index == INVALID)
                 return false;
 
-            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>();
+            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>(this, nullptr, VALUE);
             EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
 
             if (originally.isSet(ch->getComponentId())) {
                 ch->destroyComponent(entityId, index, *this);
-                entities[index].getComponentMask()->unset(getSetComponentHandle<T>()->getComponentId());
+                entities[index].getComponentMask()->unset(getSetComponentHandle<T>(this, nullptr, VALUE)->getComponentId());
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
                 return true;
             }
@@ -607,11 +600,11 @@ namespace EcsCore {
         std::vector<EcsCoreIntern::EntitySet *> entitySets;
         std::vector<EcsCoreIntern::SetIterator *> setIterators;
 
-        std::vector<EcsCoreIntern::ComponentHandle* (*) (const Component_Key*, Storing)> getSetComponentHandleFuncList;
+        std::vector<EcsCoreIntern::ComponentHandle* (*) (Manager*, const Component_Key*, Storing)> getSetComponentHandleFuncList;
 
         template<typename T>
         Component_Id getComponentId() {
-            static Component_Id id = getSetComponentHandle<T>()->getComponentId();
+            static Component_Id id = getSetComponentHandle<T>(this, nullptr, VALUE)->getComponentId();
             return id;
         }
 
@@ -630,13 +623,13 @@ namespace EcsCore {
 
         template<typename V, typename T, typename... Ts>
         void insertComponentHandles(std::vector<EcsCoreIntern::ComponentHandle *> *chs, int index) {
-            (*chs)[index] = getSetComponentHandle<T>();
+            (*chs)[index] = getSetComponentHandle<T>(this, nullptr, VALUE);
             insertComponentHandles<V, Ts...>(chs, ++index);
         }
 
         template<typename T>
         void addComponentsToComponentHandles(Entity_Index index, T component) {
-            void* p = getSetComponentHandle<T>()->createComponent(index);
+            void* p = getSetComponentHandle<T>(this, nullptr, VALUE)->createComponent(index);
             new(p) T(std::move(component));
             emitEvent(ComponentAddedEvent<T>(entities[index].id(index)));
         }
@@ -649,7 +642,7 @@ namespace EcsCore {
 
         template<typename T>
         EcsCoreIntern::ComponentHandle *linkComponentHandle(const Component_Key* componentKey, Storing storing,
-                EcsCoreIntern::ComponentHandle* (*getSetComponentHandleFunc) (const Component_Key*, Storing)) {
+                EcsCoreIntern::ComponentHandle* (*getSetComponentHandleFunc) (Manager*, const Component_Key*, Storing)) {
             if (!componentKey) {
                 std::ostringstream oss;
                 oss << "Tried to access unregistered component: " << typeid(T).name();
@@ -682,7 +675,9 @@ namespace EcsCore {
         }
 
         template<typename T>
-        static EcsCoreIntern::ComponentHandle *getSetComponentHandle(const Component_Key* componentKey = nullptr, Storing storing = DEFAULT_STORING) {
+        static EcsCoreIntern::ComponentHandle* getSetComponentHandle(
+                Manager* instance, const Component_Key* componentKey = nullptr, Storing storing = DEFAULT_STORING) {
+
             static EcsCoreIntern::ComponentHandle* componentHandle =
                     instance->linkComponentHandle<T>(componentKey, storing, &getSetComponentHandle<T>);
 
