@@ -1,3 +1,6 @@
+#define MAX_ENTITY_AMOUNT 10000000
+#define MAX_COMPONENT_AMOUNT 31
+
 #include "../ecs/Core.h"
 #include "Timer.h"
 #include "gtest/gtest.h"
@@ -7,8 +10,6 @@ using std::endl;
 using std::vector;
 
 using namespace EcsCore;
-
-uint32 COUNT = 10000000L;
 
 struct AutoTimer {
     ~AutoTimer() {
@@ -61,18 +62,18 @@ struct C10 {
 
 class BenchmarkFixture : public ::testing::Test {
 protected:
-    BenchmarkFixture() : manager(Manager<63>(COUNT)) {
+    BenchmarkFixture() : manager(Manager()) {
     }
-    Manager<63> manager;
+    Manager manager;
 };
 
 
 TEST_F(BenchmarkFixture, TestCreateEntities) {
     AutoTimer t;
 
-    cout << "creating " << COUNT << " entities" << endl;
+    cout << "creating " << MAX_ENTITY_AMOUNT << " entities" << endl;
 
-    for (uint64 i = 0; i < COUNT; i++) {
+    for (uint64 i = 0; i < MAX_ENTITY_AMOUNT; i++) {
         manager.createEntity();
     }
 }
@@ -80,12 +81,12 @@ TEST_F(BenchmarkFixture, TestCreateEntities) {
 
 TEST_F(BenchmarkFixture, TestDestroyEntities) {
   vector<EcsCore::Entity_Id> entities;
-  for (uint64 i = 0; i < COUNT; i++) {
+  for (uint64 i = 0; i < MAX_ENTITY_AMOUNT; i++) {
     entities.push_back(manager.createEntity());
   }
 
   AutoTimer t;
-  cout << "destroying " << COUNT << " entities" << endl;
+  cout << "destroying " << MAX_ENTITY_AMOUNT << " entities" << endl;
 
   for (auto e : entities) {
       manager.eraseEntity(e);
@@ -135,7 +136,7 @@ TEST_F(BenchmarkFixture, TestDestroyEntitiesWithListener) {
 
 
 TEST_F(BenchmarkFixture, TestEntityIteration) {
-    int count = COUNT;
+    int count = MAX_ENTITY_AMOUNT;
     manager.registerComponent<Position>(Component_Key("Position"));
     vector<uint64> entities;
 
@@ -154,7 +155,7 @@ TEST_F(BenchmarkFixture, TestEntityIteration) {
 }
 
 TEST_F(BenchmarkFixture, TestEntityIterationUnpackTwo) {
-    int count = COUNT;
+    int count = MAX_ENTITY_AMOUNT;
     manager.registerComponent<Position>(Component_Key("Position"));
     manager.registerComponent<Direction>(Component_Key("Direction"));
     vector<uint64> entities;
@@ -176,7 +177,7 @@ TEST_F(BenchmarkFixture, TestEntityIterationUnpackTwo) {
 }
 
 TEST_F(BenchmarkFixture, TestEntityIterationUnpackTen) {
-    int count = COUNT;
+    int count = MAX_ENTITY_AMOUNT;
     manager.registerComponent<Position>(Component_Key("Position"));
     manager.registerComponent<Direction>(Component_Key("Direction"));
     manager.registerComponent<C3>(Component_Key("c3"));
@@ -193,19 +194,19 @@ TEST_F(BenchmarkFixture, TestEntityIterationUnpackTen) {
         auto e = manager.createEntity();
         manager.addComponents<Position>(e, Position());
         manager.addComponents<Direction>(e, Direction());
-        manager.addComponents(e, new C3());
-        manager.addComponents(e, new C4());
-        manager.addComponents(e, new C5());
-        manager.addComponents(e, new C6());
-        manager.addComponents(e, new C7());
-        manager.addComponents(e, new C8());
-        manager.addComponents(e, new C9());
-        manager.addComponents(e, new C10());
+        manager.addComponents(e, C3());
+        manager.addComponents(e, C4());
+        manager.addComponents(e, C5());
+        manager.addComponents(e, C6());
+        manager.addComponents(e, C7());
+        manager.addComponents(e, C8());
+        manager.addComponents(e, C9());
+        manager.addComponents(e, C10());
         entities.push_back(e);
     }
 
     AutoTimer t;
-    cout << "iterating over " << count << " entities, unpacking two components" << endl;
+    cout << "iterating over " << count << " entities, unpacking 10 components" << endl;
 
     for (auto e : entities) {
         manager.getComponent<Position>(e);

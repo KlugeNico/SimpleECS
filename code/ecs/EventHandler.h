@@ -12,7 +12,7 @@
 #define SIMPLE_EVENT_HANDLER_H
 
 #define NOT_REGISTERED UINT32_MAX
-#define RESET_CODE "!=)?§%§&ResetId!=)?§%§&"
+#define ECS_RESET_CODE "!=)Reset?§%§&Reset!=)?§Reset%§&"
 
 namespace SimpleEH {
 
@@ -38,7 +38,7 @@ namespace SimpleEH {
 
         ~SimpleEventHandler() {
             for (uint32_t (*getReceiverListIdFunc) (const Event_Key*) : getReceiverListIdFuncList) {
-                Event_Key resetCode(RESET_CODE);
+                Event_Key resetCode(ECS_RESET_CODE);
                 getReceiverListIdFunc(&resetCode);
             }
             instance = nullptr;
@@ -79,7 +79,7 @@ namespace SimpleEH {
             static uint32_t id = instance->linkReceiverList(eventKey, &getReceiverListId<T>);
 
             if (eventKey)
-                if (*eventKey == RESET_CODE)
+                if (*eventKey == ECS_RESET_CODE)
                     id = NOT_REGISTERED;
                 else
                     id = instance->linkReceiverList(eventKey, &getReceiverListId<T>);

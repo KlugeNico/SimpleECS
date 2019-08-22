@@ -11,8 +11,6 @@
 #ifndef SIMPLE_ECS_ACCESS_H
 #define SIMPLE_ECS_ACCESS_H
 
-#define COMPONENT_AMOUNT 63
-
 #include "Core.h"
 #include "EventHandler.h"
 
@@ -41,7 +39,7 @@ namespace RtEcs {
 
     public:
 
-        Entity(EcsCore::Manager<COMPONENT_AMOUNT> *manager, EcsCore::Entity_Id entityId)
+        Entity(EcsCore::Manager *manager, EcsCore::Entity_Id entityId)
             : manager(manager), entityId(entityId) {
         }
 
@@ -79,7 +77,7 @@ namespace RtEcs {
 
     private:
         EcsCore::Entity_Id entityId;
-        EcsCore::Manager<COMPONENT_AMOUNT>* manager;
+        EcsCore::Manager* manager;
 
     };
 
@@ -91,7 +89,7 @@ namespace RtEcs {
 
         virtual void update(DELTA_TYPE delta) = 0;
 
-        virtual void init(EcsCore::Manager<COMPONENT_AMOUNT>* pManager) {
+        virtual void init(EcsCore::Manager* pManager) {
             manager = pManager;
         }
 
@@ -150,7 +148,7 @@ namespace RtEcs {
         }
 
     protected:
-        EcsCore::Manager<COMPONENT_AMOUNT>* manager = nullptr;
+        EcsCore::Manager* manager = nullptr;
 
     };
 
@@ -159,7 +157,7 @@ namespace RtEcs {
 
     public:
 
-        explicit RtManager(EcsCore::uint32 maxEntities) : managerObject(maxEntities) {
+        explicit RtManager() : managerObject() {
             manager = &managerObject;
         }
 
@@ -186,7 +184,7 @@ namespace RtEcs {
 
     private:
         std::vector<System*> systems;
-        EcsCore::Manager<COMPONENT_AMOUNT> managerObject;
+        EcsCore::Manager managerObject;
 
     };
 
@@ -197,7 +195,7 @@ namespace RtEcs {
     protected:
         EcsCore::SetIterator_Id setIteratorId = 0;
 
-        void init(EcsCore::Manager<COMPONENT_AMOUNT> *pManager) override {
+        void init(EcsCore::Manager *pManager) override {
             System::init(pManager);
             setIteratorId = manager->createSetIterator<Ts...>();
         }

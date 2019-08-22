@@ -71,7 +71,7 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
 
     cout << "Create RtManager" << endl;
 
-    RtManager manager(MAX_ENTITIES);
+    RtManager manager = RtManager();
 
     cout << "register Events" << endl;
 

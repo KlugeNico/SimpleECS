@@ -8,6 +8,9 @@
  * Author: Nico Kluge <klugenico@mailbox.org>
  */
 
+#define MAX_COMPONENT_AMOUNT 7
+#define MAX_ENTITY_AMOUNT 100000
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <iostream>
@@ -16,7 +19,6 @@
 #include <forward_list>
 #include <climits>
 #include <zconf.h>
-#include <sstream>
 #include "../../ecs/RealTimeEcs.h"
 
 using EcsCore::Entity_Id;
@@ -40,9 +42,6 @@ static const int PLAYER_VISION = 640;
 
 static const int FOLLOWER_SPAWN = (WORLD_WIDTH * WORLD_HEIGHT) * ((TILE_SCALING*TILE_SCALING) / 128.0f);
 static const int FOLLOWER_PERCEPTION = 320;
-
-static EcsCore::uint32 MAX_ENTITIES = 100000;
-static EcsCore::uint32 MAX_COMPONENTS = 256;
 
 static bool quit = false;
 
@@ -565,7 +564,7 @@ void initSdl() {
 
 void initRtEcs() {
 
-    rtEcs = new RtEcs::RtManager(MAX_ENTITIES);
+    rtEcs = new RtEcs::RtManager();
 
     rtEcs->registerComponent<Player>("player");
     rtEcs->registerComponent<Position>("position");

@@ -38,10 +38,8 @@ add_executable(walkingLetters code/examples/walkingLetters/main.cpp)
 add_executable(benchmark_test code/test/Benchmarks_test.cc)
 target_link_libraries(benchmark_test gtest gtest_main)
 
-add_executable(test_bitset code/test/functionality/BitsetTest.cc)
-add_executable(test_core code/test/functionality/CoreTest.cc)
-add_executable(test_RtEcs code/test/functionality/RtEcsEventHandelerTest.cc)
-
-target_link_libraries(test_bitset gtest gtest_main)
-target_link_libraries(test_core gtest gtest_main)
-target_link_libraries(test_RtEcs gtest gtest_main)
+add_executable(functionality_test
+        code/test/functionality/BitsetTest.cc
+        code/test/functionality/CoreTest.cc
+        code/test/functionality/RtEcsEventHandelerTest.cc)
+target_link_libraries(functionality_test gtest gtest_main)
