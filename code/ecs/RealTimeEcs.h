@@ -160,7 +160,6 @@ namespace RtEcs {
     public:
 
         explicit RtManager(EcsCore::uint32 maxEntities) : managerObject(maxEntities) {
-            managerObject.initLocal();
             manager = &managerObject;
         }
 

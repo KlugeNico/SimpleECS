@@ -361,6 +361,7 @@ namespace EcsCore {
                 componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(c_n + 1)),
                 entities(std::vector<EcsCoreIntern::Entity<c_n>>(maxEntities + 1)) {
             entities[0] = EcsCoreIntern::Entity<c_n>();
+            initLocal();
         }
 
         ~Manager() {
@@ -432,7 +433,7 @@ namespace EcsCore {
 
         template<typename T>
         void registerComponent(Component_Key componentKey, Storing storing = DEFAULT_STORING) {
-            getSetComponentHandle<T>(componentKey, storing);
+            getSetComponentHandle<T>(&componentKey, storing);
             std::ostringstream oss; oss << componentKey << "AddedEvent&?!";
             registerEvent<ComponentAddedEvent<T>>(oss.str());
             oss.str(""); oss << componentKey << "DeletedEvent&?!";
@@ -446,7 +447,7 @@ namespace EcsCore {
             if (index == INVALID)
                 return nullptr;
 
-            EcsCoreIntern::ComponentHandle* ch = getComponentHandle<T>();
+            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>();
             EcsCoreIntern::Bitset<c_n> originally = *entities[index].getComponentMask();
 
             if (!originally.isSet(ch->getComponentId())) {   // Only update if component type is new for entity
@@ -500,7 +501,7 @@ namespace EcsCore {
             if (index == INVALID)
                 return nullptr;
 
-            EcsCoreIntern::ComponentHandle* ch = getComponentHandle<T>();
+            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>();
 
             if (entities[index].getComponentMask()->isSet(ch->getComponentId()))
                 return reinterpret_cast<T *>(ch->getComponent(index));
@@ -515,12 +516,12 @@ namespace EcsCore {
             if (index == INVALID)
                 return false;
 
-            EcsCoreIntern::ComponentHandle* ch = getComponentHandle<T>();
+            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>();
             EcsCoreIntern::Bitset<c_n> originally = *entities[index].getComponentMask();
 
             if (originally.isSet(ch->getComponentId())) {
                 ch->destroyComponent(entityId, index, *this);
-                entities[index].getComponentMask()->unset(getComponentHandle<T>()->getComponentId());
+                entities[index].getComponentMask()->unset(getSetComponentHandle<T>()->getComponentId());
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
                 return true;
             }
@@ -603,7 +604,7 @@ namespace EcsCore {
 
         template<typename T>
         Component_Id getComponentId() {
-            static Component_Id id = getComponentHandle<T>()->getComponentId();
+            static Component_Id id = getSetComponentHandle<T>()->getComponentId();
             return id;
         }
 
@@ -622,13 +623,13 @@ namespace EcsCore {
 
         template<typename V, typename T, typename... Ts>
         void insertComponentHandles(std::vector<EcsCoreIntern::ComponentHandle *> *chs, int index) {
-            (*chs)[index] = getComponentHandle<T>();
+            (*chs)[index] = getSetComponentHandle<T>();
             insertComponentHandles<V, Ts...>(chs, ++index);
         }
 
         template<typename T>
         void addComponentsToComponentHandles(Entity_Index index, T component) {
-            void* p = getComponentHandle<T>()->createComponent(index);
+            void* p = getSetComponentHandle<T>()->createComponent(index);
             new(p) T(std::move(component));
             emitEvent(ComponentAddedEvent<T>(entities[index].id(index)));
         }
@@ -637,12 +638,6 @@ namespace EcsCore {
         void addComponentsToComponentHandles(Entity_Index index, T&& component, Ts&&... components) {
             addComponentsToComponentHandles<T>(index, component);
             addComponentsToComponentHandles<Ts...>(index, std::forward<Ts>(components)...);
-        }
-
-        template<typename T>
-        EcsCoreIntern::ComponentHandle *getComponentHandle() {
-            static EcsCoreIntern::ComponentHandle *componentHandle = getSetComponentHandle<T>();
-            return componentHandle;
         }
 
         template<typename T>
@@ -679,8 +674,8 @@ namespace EcsCore {
         }
 
         template<typename T>
-        EcsCoreIntern::ComponentHandle *getSetComponentHandle(Component_Key componentKey = Component_Key(), Storing storing = DEFAULT_STORING) {
-            static EcsCoreIntern::ComponentHandle *componentHandle = linkComponentHandle<T>(&componentKey, storing);
+        EcsCoreIntern::ComponentHandle *getSetComponentHandle(Component_Key* componentKey = nullptr, Storing storing = DEFAULT_STORING) {
+            static EcsCoreIntern::ComponentHandle *componentHandle = linkComponentHandle<T>(componentKey, storing);
             return componentHandle;
         }
 

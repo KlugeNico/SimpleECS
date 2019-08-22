@@ -11,6 +11,9 @@
 #ifndef SIMPLE_EVENT_HANDLER_H
 #define SIMPLE_EVENT_HANDLER_H
 
+#define NOT_REGISTERED UINT32_MAX
+#define RESET_CODE "!=)?§%§&ResetId!=)?§%§&"
+
 namespace SimpleEH {
 
     typedef std::string Event_Key;
@@ -21,23 +24,40 @@ namespace SimpleEH {
         virtual void receive(const T& event) = 0;
     };
 
+    class SimpleEventHandler;
+    static SimpleEventHandler* instance = nullptr;
+
     class SimpleEventHandler {
 
     public:
+        SimpleEventHandler() {
+            if (instance)
+                throw std::invalid_argument("SimpleEventHandler is a singleton! Only one instance allowed.");
+            instance = this;
+        }
+
+        ~SimpleEventHandler() {
+            for (uint32_t (*getReceiverListIdFunc) (const Event_Key*) : getReceiverListIdFuncList) {
+                Event_Key resetCode(RESET_CODE);
+                getReceiverListIdFunc(&resetCode);
+            }
+            instance = nullptr;
+        }
+
         template<typename T>
         void subscribeEvent(Listener<T>* listener) {
-            getReceiverList<T>().push_back(listener);
+            receiverLists[getReceiverListId<T>()].push_back(listener);
         }
 
         template<typename T>
         void unsubscribeEvent(Listener<T>* toRemove) {
-            std::vector<void*>& v = getReceiverList<T>();
+            std::vector<void*>& v = receiverLists[getReceiverListId<T>()];
             v.erase(std::remove(v.begin(), v.end(), toRemove), v.end());
         }
 
         template<typename T>
         void emitEvent(const T& event) {
-            std::vector<void*>& rList = getReceiverList<T>();
+            std::vector<void*>& rList = receiverLists[getReceiverListId<T>()];
             for (void* p : rList) {
                 Listener<T>& receiver = *reinterpret_cast<Listener<T>*>(p);
                 receiver.receive(event);
@@ -46,27 +66,39 @@ namespace SimpleEH {
 
         template<typename T>
         void registerEvent(const Event_Key& eventKey) {
-            getReceiverList<T>(eventKey);
+            getReceiverListId<T>(&eventKey);
         }
 
     private:
         std::vector<std::vector<void*>> receiverLists;
         std::unordered_map<Event_Key, uint32_t> receiverListsIdMap;
+        std::vector<uint32_t (*) (const Event_Key*)> getReceiverListIdFuncList;
 
         template<typename T>
-        std::vector<void*>& getReceiverList(const Event_Key& eventKey = Event_Key()) {
-            static uint32_t id = linkReceiverList(eventKey);
-            return receiverLists[id];
+        static uint32_t getReceiverListId(const Event_Key* eventKey = nullptr) {
+            static uint32_t id = instance->linkReceiverList(eventKey, &getReceiverListId<T>);
+
+            if (eventKey)
+                if (*eventKey == RESET_CODE)
+                    id = NOT_REGISTERED;
+                else
+                    id = instance->linkReceiverList(eventKey, &getReceiverListId<T>);
+
+            else if (id == NOT_REGISTERED)
+                throw std::invalid_argument("Tried to use unregistered event!");
+
+            return id;
         }
 
-        uint32_t linkReceiverList(const Event_Key& eventKey) {
-            if (eventKey.empty())
+        uint32_t linkReceiverList(const Event_Key* eventKey, uint32_t (*getReceiverListIdFunc) (const Event_Key*)) {
+            if (eventKey->empty())
                 throw std::invalid_argument("Tried to use unregistered event!");
-            if (!receiverListsIdMap.count(eventKey)) {     // Eventtype doesn't exist yet
-                receiverListsIdMap[eventKey] = receiverLists.size();
+            if (!receiverListsIdMap.count(*eventKey)) {     // Eventtype doesn't exist yet
+                receiverListsIdMap[*eventKey] = receiverLists.size();
                 receiverLists.emplace_back();
+                getReceiverListIdFuncList.emplace_back(getReceiverListIdFunc);
             }
-            return receiverListsIdMap[eventKey];
+            return receiverListsIdMap[*eventKey];
         }
 
     };

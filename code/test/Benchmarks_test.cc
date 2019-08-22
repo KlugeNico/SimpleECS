@@ -62,7 +62,6 @@ struct C10 {
 class BenchmarkFixture : public ::testing::Test {
 protected:
     BenchmarkFixture() : manager(Manager<63>(COUNT)) {
-        manager.initLocal();
     }
     Manager<63> manager;
 };
@@ -80,7 +79,7 @@ TEST_F(BenchmarkFixture, TestCreateEntities) {
 
 
 TEST_F(BenchmarkFixture, TestDestroyEntities) {
-  vector<uint64> entities;
+  vector<EcsCore::Entity_Id> entities;
   for (uint64 i = 0; i < COUNT; i++) {
     entities.push_back(manager.createEntity());
   }
