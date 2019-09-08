@@ -35,6 +35,8 @@ namespace RtEcs {
     template<typename T>
     using Listener = SimpleEH::Listener<T>;
 
+    class RtManager;
+
     class Entity {
 
     public:
@@ -77,7 +79,7 @@ namespace RtEcs {
 
     private:
         EcsCore::Entity_Id entityId;
-        EcsCore::Manager* manager;
+        EcsCore::Manager* const manager;
 
     };
 
@@ -89,66 +91,76 @@ namespace RtEcs {
 
         virtual void update(DELTA_TYPE delta) = 0;
 
-        virtual void init(EcsCore::Manager* pManager) {
-            manager = pManager;
+        virtual void init(EcsCore::Manager* pManager, RtManager* pRtManager) {
+            manager_ = pManager;
+            rtManager_ = pRtManager;
         }
 
         Entity getEntity(EcsCore::Entity_Id entityId) {
-            return {manager, entityId};
+            return {manager_, entityId};
         }
 
         Entity createEntity() {
-            return {manager, manager->createEntity()};
+            return {manager_, manager_->createEntity()};
         }
 
         template<typename T>
         T* getComponent(EcsCore::Entity_Id entityId) {
-            return manager->getComponent<T>(entityId);
+            return manager_->getComponent<T>(entityId);
         }
 
         // This method generates a new list with related entities, if not already existing.
         template<typename ... Ts>
         EcsCore::uint32 countEntities() {
-            return manager->getEntityAmount<Ts...>();
+            return manager_->getEntityAmount<Ts...>();
         }
 
         EcsCore::uint32 countEntities() {
-            return manager->getEntityAmount();
+            return manager_->getEntityAmount();
         }
 
         template<typename T>
         void emitEvent(T& event) {
-            manager->emitEvent(event);
+            manager_->emitEvent(event);
         }
 
         template<typename T>
         void subscribeEvent(SimpleEH::Listener<T>* listener) {
-            manager->subscribeEvent<T>(listener);
+            manager_->subscribeEvent<T>(listener);
         }
 
         template<typename T>
         void unsubscribeEvent(SimpleEH::Listener<T>* listener) {
-            manager->unsubscribeEvent<T>(listener);
+            manager_->unsubscribeEvent<T>(listener);
         }
 
         template<typename T>
         void registerEvent(Event_Key eventKey) {
-            manager->registerEvent<T>(eventKey);
+            manager_->registerEvent<T>(eventKey);
         }
 
         // Makes a variable available via access<TYPE>()
         template<typename T>
         void makeAvailable(T* object) {
-            manager->makeAvailable(object);
+            manager_->makeAvailable(object);
         }
 
         template<typename T>
         T* access() {
-            manager->access<T>();
+            manager_->access<T>();
         }
 
-    protected:
-        EcsCore::Manager* manager = nullptr;
+        inline EcsCore::Manager* manager() {
+            return manager_;
+        }
+
+        inline RtManager* rtManager() {
+            return rtManager_;
+        }
+
+    private:
+        EcsCore::Manager* manager_ = nullptr;
+        RtManager* rtManager_ = nullptr;
 
     };
 
@@ -158,7 +170,7 @@ namespace RtEcs {
     public:
 
         explicit RtManager() : managerObject() {
-            manager = &managerObject;
+            init (&managerObject, this);
         }
 
         ~RtManager() override {
@@ -167,13 +179,13 @@ namespace RtEcs {
         }
 
         void addSystem(System* system) {
-            system->init(manager);
+            system->init(manager(), this);
             systems.push_back(system);
         }
 
         template<typename T>
         void registerComponent(EcsCore::Component_Key key, EcsCore::Storing storing = EcsCore::DEFAULT_STORING) {
-            manager->registerComponent<T>(key, storing);
+            manager()->registerComponent<T>(key, storing);
         }
 
         void update(DELTA_TYPE delta) override {
@@ -195,9 +207,9 @@ namespace RtEcs {
     protected:
         EcsCore::SetIterator_Id setIteratorId = 0;
 
-        void init(EcsCore::Manager *pManager) override {
-            System::init(pManager);
-            setIteratorId = manager->createSetIterator<Ts...>();
+        void init(EcsCore::Manager *pManager, RtManager *pRtManager) override {
+            System::init(pManager, pRtManager);
+            setIteratorId = pManager->createSetIterator<Ts...>();
         }
 
     };
@@ -211,10 +223,10 @@ namespace RtEcs {
         virtual void update(Entity entity, DELTA_TYPE delta) = 0;
 
         void update(DELTA_TYPE delta) override {
-            EcsCore::Entity_Id entityId = System::manager->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+            EcsCore::Entity_Id entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             while (entityId != EcsCore::INVALID) {
                 update(Entity(System::manager, entityId), delta);
-                entityId = System::manager->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             }
         }
 
@@ -242,21 +254,21 @@ namespace RtEcs {
 
             EcsCore::Entity_Id entityId;
             if (leftIntervals == 1) {
-                entityId = System::manager->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
 
                 while (entityId != EcsCore::INVALID) {
-                    update(Entity(System::manager, entityId), overallDelta);
-                    entityId = System::manager->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                    update(Entity(System::manager(), entityId), overallDelta);
+                    entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
                 }
             }
             else {
-                EcsCore::uint32 amount = (System::manager->getEntityAmount(IteratingSystem<Ts...>::setIteratorId) - treated) / leftIntervals;
+                EcsCore::uint32 amount = (System::manager()->getEntityAmount(IteratingSystem<Ts...>::setIteratorId) - treated) / leftIntervals;
 
                 for (EcsCore::uint32 i = 0; i < amount; i++) {
-                    entityId = System::manager->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                    entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
                     if (entityId == EcsCore::INVALID)
                         break;
-                    update(Entity(System::manager, entityId), overallDelta);
+                    update(Entity(System::manager(), entityId), overallDelta);
                 }
 
                 treated += amount;
