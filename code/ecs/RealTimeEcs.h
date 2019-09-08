@@ -225,7 +225,7 @@ namespace RtEcs {
         void update(DELTA_TYPE delta) override {
             EcsCore::Entity_Id entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             while (entityId != EcsCore::INVALID) {
-                update(Entity(System::manager, entityId), delta);
+                update(Entity(System::manager(), entityId), delta);
                 entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             }
         }
