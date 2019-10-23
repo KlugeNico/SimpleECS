@@ -715,6 +715,11 @@ namespace EcsCore {
         T* getSetSingleton(T* object = nullptr) {
             static T* singleton = object;
             if (object) singleton = object;
+            if (!singleton) {
+                std::ostringstream oss;
+                oss << "Tried to access unregistered Type: " << typeid(T).name() << ". Use makeAvailable.";
+                throw std::invalid_argument(oss.str());
+            }
             return singleton;
         }
 

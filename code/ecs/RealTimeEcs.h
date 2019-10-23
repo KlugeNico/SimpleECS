@@ -241,7 +241,7 @@ namespace RtEcs {
         virtual void update(Entity entity, DELTA_TYPE delta) = 0;
         virtual void end(DELTA_TYPE delta){};
 
-        explicit IntervalSystem(EcsCore::uint32 intervals)
+        explicit IntervalSystem(EcsCore::uint32 intervals = 1)
             : intervals(intervals), overallDelta(0), leftIntervals(intervals) {
                 if (intervals < 1)
                     throw std::invalid_argument("Minimum 1 Interval!");
