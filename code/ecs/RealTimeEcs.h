@@ -220,14 +220,18 @@ namespace RtEcs {
 
     public:
 
+        virtual void start(DELTA_TYPE delta){};
         virtual void update(Entity entity, DELTA_TYPE delta) = 0;
+        virtual void end(DELTA_TYPE delta){};
 
         void update(DELTA_TYPE delta) override {
+            start(delta);
             EcsCore::Entity_Id entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             while (entityId != EcsCore::INVALID) {
                 update(Entity(System::manager(), entityId), delta);
                 entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             }
+            end(delta);
         }
 
     };
