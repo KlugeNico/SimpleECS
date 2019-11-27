@@ -41,6 +41,8 @@ namespace RtEcs {
 
     public:
 
+        Entity() : manager(nullptr), entityId(0) {}
+
         Entity(EcsCore::Manager *manager, EcsCore::Entity_Id entityId)
             : manager(manager), entityId(entityId) {
         }
@@ -79,7 +81,7 @@ namespace RtEcs {
 
     private:
         EcsCore::Entity_Id entityId;
-        EcsCore::Manager* const manager;
+        EcsCore::Manager* manager;
 
     };
 
