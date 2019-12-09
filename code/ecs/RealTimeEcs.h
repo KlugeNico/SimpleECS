@@ -19,7 +19,7 @@ namespace RtEcs {
     typedef float DELTA_TYPE;
 
     using EcsCore::Entity_Id;
-    using EcsCore::Component_Key;
+    using EcsCore::Key;
 
     using EcsCore::INVALID;
     using EcsCore::NOT_AVAILABLE;
@@ -30,7 +30,7 @@ namespace RtEcs {
     using EcsCore::EntityCreatedEvent;
     using EcsCore::EntityErasedEvent;
 
-    typedef SimpleEH::Event_Key Event_Key;
+    typedef SimpleEH::Key Event_Key;
 
     template<typename T>
     using Listener = SimpleEH::Listener<T>;
@@ -136,11 +136,6 @@ namespace RtEcs {
             manager_->unsubscribeEvent<T>(listener);
         }
 
-        template<typename T>
-        void registerEvent(Event_Key eventKey) {
-            manager_->registerEvent<T>(eventKey);
-        }
-
         // Makes a variable available via access<TYPE>()
         template<typename T>
         void makeAvailable(T* object) {
@@ -186,7 +181,7 @@ namespace RtEcs {
         }
 
         template<typename T>
-        void registerComponent(EcsCore::Component_Key key, EcsCore::Storing storing = EcsCore::DEFAULT_STORING) {
+        void registerComponent(EcsCore::Key key, EcsCore::Storing storing = EcsCore::DEFAULT_STORING) {
             manager()->registerComponent<T>(key, storing);
         }
 

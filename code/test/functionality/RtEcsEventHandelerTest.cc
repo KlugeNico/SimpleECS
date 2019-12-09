@@ -75,10 +75,6 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
 
     cout << "register Events" << endl;
 
-    manager.registerEvent<SomeEvent>("SomeEvent");
-    manager.registerEvent<SomeOtherEvent>("SomeOtherEvent");
-    manager.registerEvent<WrongEvent>("WrongEvent");
-
     cout << "add Listener" << endl;
 
     SomeReceiver receiver;

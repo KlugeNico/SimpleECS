@@ -321,7 +321,6 @@ class ExplosionSystem : public RtEcs::System, public SimpleEH::Listener<Collisio
 
 public:
     ExplosionSystem(RtEcs::RtManager* manager) {
-        manager->registerEvent<CollisionEvent>("CollisionEvent");
         manager->subscribeEvent(this);
     }
 

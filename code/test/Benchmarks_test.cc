@@ -137,7 +137,7 @@ TEST_F(BenchmarkFixture, TestDestroyEntitiesWithListener) {
 
 TEST_F(BenchmarkFixture, TestEntityIteration) {
     int count = MAX_ENTITY_AMOUNT;
-    manager.registerComponent<Position>(Component_Key("Position"));
+    manager.registerComponent<Position>(Key("Position"));
     vector<uint64> entities;
 
     for (int i = 0; i < count; i++) {
@@ -156,8 +156,8 @@ TEST_F(BenchmarkFixture, TestEntityIteration) {
 
 TEST_F(BenchmarkFixture, TestEntityIterationUnpackTwo) {
     int count = MAX_ENTITY_AMOUNT;
-    manager.registerComponent<Position>(Component_Key("Position"));
-    manager.registerComponent<Direction>(Component_Key("Direction"));
+    manager.registerComponent<Position>(Key("Position"));
+    manager.registerComponent<Direction>(Key("Direction"));
     vector<uint64> entities;
 
     for (int i = 0; i < count; i++) {
@@ -178,16 +178,16 @@ TEST_F(BenchmarkFixture, TestEntityIterationUnpackTwo) {
 
 TEST_F(BenchmarkFixture, TestEntityIterationUnpackTen) {
     int count = MAX_ENTITY_AMOUNT;
-    manager.registerComponent<Position>(Component_Key("Position"));
-    manager.registerComponent<Direction>(Component_Key("Direction"));
-    manager.registerComponent<C3>(Component_Key("c3"));
-    manager.registerComponent<C4>(Component_Key("c4"));
-    manager.registerComponent<C5>(Component_Key("c5"));
-    manager.registerComponent<C6>(Component_Key("c6"));
-    manager.registerComponent<C7>(Component_Key("c7"));
-    manager.registerComponent<C8>(Component_Key("c8"));
-    manager.registerComponent<C9>(Component_Key("c9"));
-    manager.registerComponent<C10>(Component_Key("c10"));
+    manager.registerComponent<Position>(Key("Position"));
+    manager.registerComponent<Direction>(Key("Direction"));
+    manager.registerComponent<C3>(Key("c3"));
+    manager.registerComponent<C4>(Key("c4"));
+    manager.registerComponent<C5>(Key("c5"));
+    manager.registerComponent<C6>(Key("c6"));
+    manager.registerComponent<C7>(Key("c7"));
+    manager.registerComponent<C8>(Key("c8"));
+    manager.registerComponent<C9>(Key("c9"));
+    manager.registerComponent<C10>(Key("c10"));
     vector<uint64> entities;
 
     for (int i = 0; i < count; i++) {

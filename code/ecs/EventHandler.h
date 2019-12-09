@@ -16,7 +16,7 @@
 
 namespace SimpleEH {
 
-    typedef std::string Event_Key;
+    typedef std::string Key;
 
     template<typename T>
     class Listener {
@@ -29,9 +29,9 @@ namespace SimpleEH {
     public:
 
         ~SimpleEventHandler() {
-            for (uint32_t (*getReceiverListIdFunc) (SimpleEventHandler*, const Event_Key*) : getReceiverListIdFuncList) {
-                Event_Key resetCode(ECS_RESET_CODE);
-                getReceiverListIdFunc(this, &resetCode);
+            for (uint32_t (*getReceiverListIdFunc) (SimpleEventHandler*, bool) : getReceiverListIdFuncList) {
+                Key resetCode(ECS_RESET_CODE);
+                getReceiverListIdFunc(this, true);
             }
         }
 
@@ -55,41 +55,37 @@ namespace SimpleEH {
             }
         }
 
-        template<typename T>
-        void registerEvent(const Event_Key& eventKey) {
-            getReceiverListId<T>(this, &eventKey);
+        static std::string cleanClassName(const char* name) {
+            char* strP = abi::__cxa_demangle(name,nullptr,nullptr,nullptr);
+            std::string string(strP);
+            free(strP);
+            return std::move(string);
         }
 
     private:
         std::vector<std::vector<void*>> receiverLists;
-        std::unordered_map<Event_Key, uint32_t> receiverListsIdMap;
-        std::vector<uint32_t (*) (SimpleEventHandler*, const Event_Key*)> getReceiverListIdFuncList;
+        std::unordered_map<Key, uint32_t> receiverListsIdMap;
+        std::vector<uint32_t (*) (SimpleEventHandler*, bool)> getReceiverListIdFuncList;
 
         template<typename T>
-        static uint32_t getReceiverListId(SimpleEventHandler* instance, const Event_Key* eventKey = nullptr) {
-            static uint32_t id = instance->linkReceiverList(eventKey, &getReceiverListId<T>);
+        static uint32_t getReceiverListId(SimpleEventHandler* instance, bool reset = false) {
+            static uint32_t id = instance->linkReceiverList(cleanClassName(typeid(T).name()), &getReceiverListId<T>);
 
-            if (eventKey)
-                if (*eventKey == ECS_RESET_CODE)
-                    id = NOT_REGISTERED;
-                else
-                    id = instance->linkReceiverList(eventKey, &getReceiverListId<T>);
-
+            if (reset)
+                id = NOT_REGISTERED;
             else if (id == NOT_REGISTERED)
-                throw std::invalid_argument("Tried to use unregistered event!");
+                id = instance->linkReceiverList(cleanClassName(typeid(T).name()), &getReceiverListId<T>);
 
             return id;
         }
 
-        uint32_t linkReceiverList(const Event_Key* eventKey, uint32_t (*getReceiverListIdFunc) (SimpleEventHandler*, const Event_Key*)) {
-            if (eventKey->empty())
-                throw std::invalid_argument("Tried to use unregistered event!");
-            if (!receiverListsIdMap.count(*eventKey)) {     // Eventtype doesn't exist yet
-                receiverListsIdMap[*eventKey] = receiverLists.size();
+        uint32_t linkReceiverList(const Key& eventKey, uint32_t (*getReceiverListIdFunc) (SimpleEventHandler*, bool)) {
+            if (!receiverListsIdMap.count(eventKey)) {     // Eventtype doesn't exist yet
+                receiverListsIdMap[eventKey] = receiverLists.size();
                 receiverLists.emplace_back();
                 getReceiverListIdFuncList.emplace_back(getReceiverListIdFunc);
             }
-            return receiverListsIdMap[*eventKey];
+            return receiverListsIdMap[eventKey];
         }
 
     };

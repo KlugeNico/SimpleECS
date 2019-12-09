@@ -32,6 +32,7 @@
 #include <sstream>
 #include <typeinfo>
 #include <iostream>
+#include <cxxabi.h>
 #include "EventHandler.h"
 
 namespace EcsCore {
@@ -47,7 +48,7 @@ namespace EcsCore {
     typedef uint32 Component_Id;
     typedef uint32 SetIterator_Id;
     typedef uint32 Intern_Index;
-    typedef std::string Component_Key;
+    typedef std::string Key;
 
     static const uint32 INVALID = 0;
     static const std::nullptr_t NOT_AVAILABLE = nullptr;
@@ -103,12 +104,12 @@ namespace EcsCore {
             }
 
             inline bool isSet(uint32 bit) {
-                return ((bitset[bit / BITSET_TYPE_SIZE] >> (bit % BITSET_TYPE_SIZE)) & BITSET_TYPE(1)) == 1;
+                return ((bitset[bit / BITSET_TYPE_SIZE] >> (bit % BITSET_TYPE_SIZE)) & BITSET_TYPE(1u)) == 1u;
             }
 
             inline bool contains(Bitset *other) {
                 for (size_t i = 0; i < arraySize; ++i)
-                    if ((other->bitset[i] & ~bitset[i]) > 0)
+                    if ((other->bitset[i] & ~bitset[i]) > 0u)
                         return false;
                 return true;
             }
@@ -149,7 +150,7 @@ namespace EcsCore {
         class EntitySet {
 
         public:
-            EntitySet(std::vector<Component_Id> componentIds) :
+            explicit EntitySet(std::vector<Component_Id> componentIds) :
                     componentIds(componentIds),
                     mask(ComponentBitset()) {
                 std::sort(componentIds.begin(), componentIds.end());
@@ -362,24 +363,17 @@ namespace EcsCore {
                 componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(MAX_COMPONENT_AMOUNT + 1)),
                 entities(std::vector<EcsCoreIntern::Entity>(MAX_ENTITY_AMOUNT + 1)) {
             entities[0] = EcsCoreIntern::Entity();
-
-            initLocal();
         }
 
         ~Manager() {
             for (EcsCoreIntern::ComponentHandle *ch : componentVector) delete ch;
             for (EcsCoreIntern::EntitySet *set : entitySets) delete set;
             for (EcsCoreIntern::SetIterator *setIterator : setIterators) delete setIterator;
-            for (EcsCoreIntern::ComponentHandle* (*func) (Manager*, const Component_Key*, Storing)
+            for (EcsCoreIntern::ComponentHandle* (*func) (Manager*, const Key*, Storing)
                     : getSetComponentHandleFuncList) {
-                Component_Key resetCode(ECS_RESET_CODE);
+                Key resetCode(ECS_RESET_CODE);
                 func(this, &resetCode, DEFAULT_STORING);
             }
-        }
-
-        void initLocal() {
-            registerEvent<EntityCreatedEvent>("EcsCore::EntityCreatedEvent&?!");
-            registerEvent<EntityErasedEvent>("EcsCore::EntityErasedEvent&?!");
         }
 
         Entity_Id createEntity() {
@@ -431,12 +425,8 @@ namespace EcsCore {
         }
 
         template<typename T>
-        void registerComponent(Component_Key componentKey, Storing storing = DEFAULT_STORING) {
+        void registerComponent(Key componentKey, Storing storing = DEFAULT_STORING) {
             getSetComponentHandle<T>(this, &componentKey, storing);
-            std::ostringstream oss; oss << componentKey << "AddedEvent&?!";
-            registerEvent<ComponentAddedEvent<T>>(oss.str());
-            oss.str(""); oss << componentKey << "DeletedEvent&?!";
-            registerEvent<ComponentDeletedEvent<T>>(oss.str());
         }
 
         template <typename T>
@@ -594,13 +584,15 @@ namespace EcsCore {
         std::vector<Entity_Index> freeEntityIndices;
 
         Component_Id lastComponentIndex = 0;
-        std::unordered_map<Component_Key, EcsCoreIntern::ComponentHandle *> componentMap;
+        std::unordered_map<Key, EcsCoreIntern::ComponentHandle *> componentMap;
         std::vector<EcsCoreIntern::ComponentHandle *> componentVector;
 
         std::vector<EcsCoreIntern::EntitySet *> entitySets;
         std::vector<EcsCoreIntern::SetIterator *> setIterators;
 
-        std::vector<EcsCoreIntern::ComponentHandle* (*) (Manager*, const Component_Key*, Storing)> getSetComponentHandleFuncList;
+        std::vector<EcsCoreIntern::ComponentHandle* (*) (Manager*, const Key*, Storing)> getSetComponentHandleFuncList;
+
+        std::unordered_map<Key, void*> singletons;
 
         template<typename T>
         Component_Id getComponentId() {
@@ -641,8 +633,8 @@ namespace EcsCore {
         }
 
         template<typename T>
-        EcsCoreIntern::ComponentHandle *linkComponentHandle(const Component_Key* componentKey, Storing storing,
-                EcsCoreIntern::ComponentHandle* (*getSetComponentHandleFunc) (Manager*, const Component_Key*, Storing)) {
+        EcsCoreIntern::ComponentHandle *linkComponentHandle(const Key* componentKey, Storing storing,
+                                                            EcsCoreIntern::ComponentHandle* (*getSetComponentHandleFunc) (Manager*, const Key*, Storing)) {
             if (!componentKey) {
                 std::ostringstream oss;
                 oss << "Tried to access unregistered component: " << typeid(T).name();
@@ -676,7 +668,7 @@ namespace EcsCore {
 
         template<typename T>
         static EcsCoreIntern::ComponentHandle* getSetComponentHandle(
-                Manager* instance, const Component_Key* componentKey = nullptr, Storing storing = DEFAULT_STORING) {
+                Manager* instance, const Key* componentKey = nullptr, Storing storing = DEFAULT_STORING) {
 
             static EcsCoreIntern::ComponentHandle* componentHandle =
                     instance->linkComponentHandle<T>(componentKey, storing, &getSetComponentHandle<T>);
@@ -714,11 +706,21 @@ namespace EcsCore {
         template<typename T>
         T* getSetSingleton(T* object = nullptr) {
             static T* singleton = object;
-            if (object) singleton = object;
-            if (!singleton) {
-                std::ostringstream oss;
-                oss << "Tried to access unregistered Type: " << typeid(T).name() << ". Use makeAvailable.";
-                throw std::invalid_argument(oss.str());
+            if (object || !singleton) {
+                Key className = cleanClassName(typeid(T).name());
+                if (object) {
+                    singleton = object;
+                    singletons[className] = singleton;
+                }
+                else {
+                    if (singletons[className])
+                        singleton = reinterpret_cast<T *>(singletons[className]);
+                    else {
+                        std::ostringstream oss;
+                        oss << "Tried to access unregistered Type: " << typeid(T).name() << ". Use makeAvailable.";
+                        throw std::invalid_argument(oss.str());
+                    }
+                }
             }
             return singleton;
         }
