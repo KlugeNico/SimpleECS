@@ -578,7 +578,7 @@ void initRtEcs() {
     RtEcs::Entity player = rtEcs->createEntity();
 
     player.addComponent(Player());
-    player.addComponent(Position(player.getId(), WORLD_WIDTH * 64, WORLD_HEIGHT * 64));
+    player.addComponent(Position(player.id(), WORLD_WIDTH * 64, WORLD_HEIGHT * 64));
     player.addComponent(Body(20, 0xFF, 0x00, 0x00));
     player.addComponent(Perception(PLAYER_VISION));
     player.addComponent(Movement(PLAYER_SPEED));
@@ -588,13 +588,13 @@ void initRtEcs() {
 
     for (int i = 0; i < TREE_SPAWN; i++) {
         RtEcs::Entity tree = rtEcs->createEntity();
-        tree.addComponent(Position(tree.getId(), randX.get(), randY.get()));
+        tree.addComponent(Position(tree.id(), randX.get(), randY.get()));
         tree.addComponent(Body(20, 32, 128, 16));
     }
 
     for (int i = 0; i < FOLLOWER_SPAWN; i++) {
         RtEcs::Entity follower = rtEcs->createEntity();
-        follower.addComponent(Position(follower.getId(), randX.get(), randY.get()));
+        follower.addComponent(Position(follower.id(), randX.get(), randY.get()));
         follower.addComponent(Body(20, 32, 32, 128));
         follower.addComponent(Perception(FOLLOWER_PERCEPTION));
         follower.addComponent(Movement(PLAYER_SPEED));

@@ -586,6 +586,12 @@ namespace EcsCore {
             return index;
         }
 
+        Entity_Id getIdFromIndex(Entity_Index index) {
+            if (index > lastEntityIndex)
+                return INVALID;
+            return (((Entity_Id) entities[index].version()) * POW_2_32 | index);
+        }
+
     private:
         Entity_Index lastEntityIndex = 0;
         std::vector<EcsCoreIntern::Entity> entities;

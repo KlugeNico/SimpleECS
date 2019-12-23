@@ -229,7 +229,7 @@ private:
                 top = static_cast<int>(body->position.y - collideable->radius) / PARTITIONS,
                 right = static_cast<int>(body->position.x + collideable->radius) / PARTITIONS,
                 bottom = static_cast<int>(body->position.y + collideable->radius) / PARTITIONS;
-        Candidate candidate {body->position, collideable->radius, entity.getId()};
+        Candidate candidate {body->position, collideable->radius, entity.id()};
         unsigned int slots[4] = {
                 left + top * size.x,
                 right + top * size.x,

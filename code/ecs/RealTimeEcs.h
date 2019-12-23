@@ -19,6 +19,7 @@ namespace RtEcs {
     typedef float DELTA_TYPE;
 
     using EcsCore::Entity_Id;
+    using EcsCore::Entity_Index;
     using EcsCore::Key;
 
     using EcsCore::INVALID;
@@ -79,7 +80,7 @@ namespace RtEcs {
             return manager->getComponent<T>(entityId);
         }
 
-        inline EcsCore::Entity_Id getId() const {
+        inline EcsCore::Entity_Id id() const {
             return entityId;
         }
 
@@ -104,6 +105,10 @@ namespace RtEcs {
 
         Entity getEntity(EcsCore::Entity_Id entityId) {
             return {manager_, entityId};
+        }
+
+        Entity getEntityByIndex(EcsCore::Entity_Index entityIndex) {
+            return {manager_, manager_->getIdFromIndex(entityIndex)};
         }
 
         Entity createEntity() {
