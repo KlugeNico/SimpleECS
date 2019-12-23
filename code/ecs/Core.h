@@ -577,6 +577,15 @@ namespace EcsCore {
             return getSetSingleton<S_T>();
         }
 
+        inline Entity_Index getIndex(Entity_Id entityId) {
+            auto index = static_cast<Entity_Index>(entityId);
+            if (index > lastEntityIndex)
+                return INVALID;
+            if (static_cast<Entity_Version>(entityId >> Entity_Id(32)) != entities[index].version())
+                return INVALID;
+            return index;
+        }
+
     private:
         Entity_Index lastEntityIndex = 0;
         std::vector<EcsCoreIntern::Entity> entities;
@@ -686,15 +695,6 @@ namespace EcsCore {
             }
 
             return componentHandle;
-        }
-
-        inline Entity_Index getIndex(Entity_Id entityId) {
-            auto index = static_cast<Entity_Index>(entityId);
-            if (index > lastEntityIndex)
-                return INVALID;
-            if (static_cast<Entity_Version>(entityId >> Entity_Id(32)) != entities[index].version())
-                return INVALID;
-            return index;
         }
 
         void updateAllMemberships(Entity_Id entityId, EcsCoreIntern::ComponentBitset *previous, EcsCoreIntern::ComponentBitset *recent) {

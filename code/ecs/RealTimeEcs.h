@@ -57,25 +57,29 @@ namespace RtEcs {
             manager->addComponents<Ts...>(entityId, std::forward<Ts>(components)...);
         }
 
-        bool erase() {
+        inline bool erase() {
             return manager->eraseEntity(entityId);
         }
 
-        bool isValid() {
+        inline bool isValid() {
             return manager->isValid(entityId);
         }
 
+        inline EcsCore::Entity_Index index() {
+            return manager->getIndex(entityId);
+        }
+
         template<typename T>
-        bool deleteComponent() {
+        inline bool deleteComponent() {
             return manager->deleteComponent<T>(entityId);
         }
 
         template<typename T>
-        T* getComponent() const {
+        inline T* getComponent() const {
             return manager->getComponent<T>(entityId);
         }
 
-        EcsCore::Entity_Id getId() const {
+        inline EcsCore::Entity_Id getId() const {
             return entityId;
         }
 
