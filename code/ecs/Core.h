@@ -21,7 +21,7 @@
 #endif
 
 #ifndef MAX_ENTITY_AMOUNT
-    #define MAX_ENTITY_AMOUNT 1000000
+    #define MAX_ENTITY_AMOUNT 100000
 #endif
 
 #include <unordered_map>
