@@ -31,7 +31,7 @@ Each used combination of components (usually in Systems) organizes its own list 
 
 ### Component storage
 
-Components are stored in ComponentHandles. The ComponentHandles are containing the values directly. But it's also possible to store pointers to components instead for big components to save storage.
+Components are stored in ComponentHandles. The ComponentHandles are containing the values directly. But it's also possible to storeValue pointers to components instead for big components to save storage.
 
 ## Usage
 

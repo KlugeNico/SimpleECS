@@ -1722,7 +1722,7 @@ using ::testing::Return;
 
 This makes `my_mock.IsDirty()` return `true` before `my_mock.Flush()` is called and return `false` afterwards.
 
-If the behavior change is more complex, you can store the effects in a variable and make a mock method get its return value from that variable:
+If the behavior change is more complex, you can storeValue the effects in a variable and make a mock method get its return value from that variable:
 
 ```
 using ::testing::_;
