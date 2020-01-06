@@ -55,7 +55,7 @@ namespace RtEcs {
 
         template<typename ... Ts>
         bool addComponents(Ts&&... components) {
-            manager->addComponents<Ts...>(entityId, std::forward<Ts>(components)...);
+            return manager->addComponents<Ts...>(entityId, std::forward<Ts>(components)...);
         }
 
         inline bool erase() {
