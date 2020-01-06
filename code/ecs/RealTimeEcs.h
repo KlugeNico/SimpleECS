@@ -153,7 +153,7 @@ namespace RtEcs {
 
         template<typename T>
         T* access() {
-            manager_->access<T>();
+            return manager_->access<T>();
         }
 
         inline EcsCore::Manager* manager() {
