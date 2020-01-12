@@ -131,7 +131,7 @@ namespace RtEcs {
         }
 
         template<typename T>
-        void emitEvent(T& event) {
+        void emitEvent(const T& event) {
             manager_->emitEvent(event);
         }
 
