@@ -35,15 +35,15 @@ Components are stored in ComponentHandles. The ComponentHandles are containing t
 
 ## Usage
 
-The project contains a [Core](code/ecs/Core.h) file, which is a standalone header file with all main functionality. Because using the core directly is a little bit unhandy there is also a [Wrapper for real time applications](code/ecs/RealTimeEcs.h) (supports fps and comfortable systems). Additional there is an external [EventHandler](code/ecs/EventHandler.h).
+The project contains a [Core](code/SimpleECS/Core.h) file, which is a standalone header file with all main functionality. Because using the core directly is a little bit unhandy there is also a [Wrapper for real time applications](code/SimpleECS/RealTimeEcs.h) (supports fps and comfortable systems). Additional there is an external [EventHandler](code/SimpleECS/EventHandler.h).
 
 The ECS takes care about the deletion of removed components. Also if the entity gets deleted. So you should not assign one component object to multiple entities.
 
 There are three examples which demonstrate the usage of the real time wrapper.
 
-- [A very small example](code/examples/walkingLetters/main.cpp) which explains the the fundamental usage. (Recommended to start with.)
-- [The SFML example from EntityX](code/examples/exampleFromEntityx/example.cc) changed to use SimpleECS.
-- [Some small "game"](code/examples/movingblocks/main.cpp) with SDL2.
+- [A very small example](examples/walkingLetters/main.cpp) which explains the the fundamental usage. (Recommended to start with.)
+- [The SFML example from EntityX](examples/exampleFromEntityx/example.cc) changed to use SimpleECS.
+- [Some small "game"](examples/movingblocks/main.cpp) with SDL2.
 
 ## Contact
 

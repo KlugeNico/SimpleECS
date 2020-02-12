@@ -19,7 +19,7 @@ find_package(SFML 2 COMPONENTS graphics window system)
 
 IF( SDL2_FOUND AND OpenGL_FOUND AND SDL2TTF_FOUND )
     include_directories(${SDL2_INCLUDE_DIR} ${SDL2TTF_INCLUDE_DIR})
-    add_executable(movingblocks code/examples/movingblocks/main.cpp)
+    add_executable(movingblocks examples/movingblocks/main.cpp)
     target_link_libraries(movingblocks ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} ${SDL2TTF_LIBRARY})
 ELSE()
     message("Can't build example movingblocks: Install SDL2 OpenGL and SDL2TTF, if you wanna run it.")
@@ -27,21 +27,21 @@ ENDIF()
 
 IF( SFML_FOUND )
     include_directories(${SFML_INCLUDE_DIR})
-    add_executable(entitxExample code/examples/exampleFromEntityx/example.cc)
+    add_executable(entitxExample examples/exampleFromEntityx/example.cc)
     target_link_libraries(entitxExample ${SFML_LIBRARIES})
 ELSE()
     message("Can't build example entitxExample: Install SFML, if you wanna run it.")
 ENDIF()
 
-add_executable(walkingLetters code/examples/walkingLetters/main.cpp)
+add_executable(walkingLetters examples/walkingLetters/main.cpp)
 
-add_executable(benchmark_test code/test/Benchmarks_test.cc)
+add_executable(benchmark_test test/Benchmarks_test.cc)
 target_link_libraries(benchmark_test gtest gtest_main)
 
 add_executable(functionality_test
-        code/test/functionality/BitsetTest.cc
-        code/test/functionality/CoreTest.cc
-        code/test/functionality/RtEcsEventHandelerTest.cc)
+        test/functionality/BitsetTest.cc
+        test/functionality/CoreTest.cc
+        test/functionality/RtEcsEventHandelerTest.cc)
 target_link_libraries(functionality_test gtest gtest_main)
 
 add_library(${PROJECT_NAME} INTERFACE)
