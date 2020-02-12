@@ -7,10 +7,10 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/)
 
 if (NOT TARGET gtest)
-    add_subdirectory(googletest-release-1.8.1)
+    add_subdirectory(libs/googletest)
 endif()
 
-project(simpleecs)
+project(SimpleECS)
 
 find_package(SDL2)
 find_package(OpenGL)
@@ -43,3 +43,6 @@ add_executable(functionality_test
         code/test/functionality/CoreTest.cc
         code/test/functionality/RtEcsEventHandelerTest.cc)
 target_link_libraries(functionality_test gtest gtest_main)
+
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(${PROJECT_NAME} INTERFACE code)
