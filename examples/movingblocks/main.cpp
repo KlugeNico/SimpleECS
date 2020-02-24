@@ -19,7 +19,7 @@
 #include <forward_list>
 #include <climits>
 #include <zconf.h>
-#include "../../ecs/RealTimeEcs.h"
+#include <SimpleECS/RealTimeEcs.h>
 
 using EcsCore::Entity_Id;
 

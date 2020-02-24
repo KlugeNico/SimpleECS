@@ -1,5 +1,5 @@
 #include <thread>
-#include "../../ecs/RealTimeEcs.h"
+#include <SimpleECS/RealTimeEcs.h>
 #include "gtest/gtest.h"
 
 using std::cout;
@@ -71,7 +71,7 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
 
     cout << "Create RtManager" << endl;
 
-    RtManager manager = RtManager();
+    RtManager manager;
 
     cout << "register Events" << endl;
 

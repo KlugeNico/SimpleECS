@@ -359,6 +359,8 @@ namespace EcsCore {
     class Manager : public SimpleEH::SimpleEventHandler {
 
     public:
+        Manager(const Manager&) = delete;
+
         explicit Manager() :
                 componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(MAX_COMPONENT_AMOUNT + 1)),
                 entities(std::vector<EcsCoreIntern::Entity>(MAX_ENTITY_AMOUNT + 1)) {

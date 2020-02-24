@@ -1,7 +1,7 @@
 #define MAX_ENTITY_AMOUNT 10000000
 #define MAX_COMPONENT_AMOUNT 31
 
-#include "../ecs/Core.h"
+#include <SimpleECS/Core.h>
 #include "Timer.h"
 #include "gtest/gtest.h"
 
@@ -62,7 +62,7 @@ struct C10 {
 
 class BenchmarkFixture : public ::testing::Test {
 protected:
-    BenchmarkFixture() : manager(Manager()) {
+    BenchmarkFixture() : manager() {
     }
     Manager manager;
 };

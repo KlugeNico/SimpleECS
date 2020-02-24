@@ -1,5 +1,6 @@
 #include <iostream>
-#include "../../ecs/RealTimeEcs.h"
+#include <SimpleECS/RealTimeEcs.h>
+
 
 // The length of the map. It's a 1-dimensional, as a string represented map.
 #define MAP_SIZE 80
@@ -106,7 +107,7 @@ public:
 int main() {
 
     // Here we init the ecs with a capacity of maximal 1000 entities and 10 components.
-    RtEcs::RtManager ecs = RtEcs::RtManager();
+    RtEcs::RtManager ecs;
 
     // Here we register our components. We could include them in an extern library and register them with the same name,
     // to access them from the external library. Registering different components with the same name in two libraries

@@ -11,6 +11,8 @@
 #ifndef SIMPLE_ECS_ACCESS_H
 #define SIMPLE_ECS_ACCESS_H
 
+#include <type_traits>
+
 #include "Core.h"
 #include "EventHandler.h"
 
@@ -37,6 +39,22 @@ namespace RtEcs {
     using Listener = SimpleEH::Listener<T>;
 
     class RtManager;
+
+
+    class AutoDeleter {
+
+    public:
+        AutoDeleter(void* pointer, void(*deleteFunc)(void *)) : pointer(pointer), deleteFunc(deleteFunc) {}
+        ~AutoDeleter() {
+            deleteFunc(pointer);
+        }
+
+    private:
+        void* pointer;
+        void(*deleteFunc)(void *);
+
+    };
+
 
     class Entity {
 
@@ -91,12 +109,10 @@ namespace RtEcs {
     };
 
 
-    class System {
+    class Handler {
 
     public:
-        virtual ~System() = default;
-
-        virtual void update(DELTA_TYPE delta) = 0;
+        virtual ~Handler() = default;
 
         virtual void init(EcsCore::Manager* pManager, RtManager* pRtManager) {
             manager_ = pManager;
@@ -171,12 +187,21 @@ namespace RtEcs {
     };
 
 
+    class System : public Handler {
+
+    public:
+        virtual void update(DELTA_TYPE delta) = 0;
+
+    };
+
+
     class RtManager : public System {
 
     public:
+        RtManager(const RtManager&) = delete;
 
         explicit RtManager() : managerObject() {
-            init (&managerObject, this);
+            Handler::init (&managerObject, this);
         }
 
         ~RtManager() override {
@@ -184,9 +209,24 @@ namespace RtEcs {
                 delete system;
         }
 
-        void addSystem(System* system) {
+        template <typename T, typename = std::enable_if_t<std::is_base_of<System, T>::value>>
+        T* addSystem(T* system) {
             system->init(manager(), this);
-            systems.push_back(system);
+            systems.push_back(dynamic_cast<System*>(system));
+            return system;
+        }
+
+        template<typename T>
+        T* addSingleton(T* singleton) {
+            singletons.emplace_back(singleton,   [](void *p) { delete reinterpret_cast<T *>(p); }    );
+            makeAvailable(singleton);
+            return singleton;
+        }
+
+        template <typename T, typename = std::enable_if_t<std::is_base_of<Handler, T>::value>>
+        T* addHandler(T* handler) {
+            handler->init(manager(), rtManager());
+            return addSingleton(handler);
         }
 
         template<typename T>
@@ -202,6 +242,7 @@ namespace RtEcs {
 
     private:
         std::vector<System*> systems;
+        std::vector<AutoDeleter> singletons;
         EcsCore::Manager managerObject;
 
     };
@@ -209,12 +250,13 @@ namespace RtEcs {
 
     template<typename ... Ts>
     class IteratingSystem : public System {
+        friend RtManager;
 
     protected:
         EcsCore::SetIterator_Id setIteratorId = 0;
 
         void init(EcsCore::Manager *pManager, RtManager *pRtManager) override {
-            System::init(pManager, pRtManager);
+            Handler::init(pManager, pRtManager);
             setIteratorId = pManager->createSetIterator<Ts...>();
         }
 
@@ -232,10 +274,10 @@ namespace RtEcs {
 
         void update(DELTA_TYPE delta) override {
             start(delta);
-            EcsCore::Entity_Id entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+            EcsCore::Entity_Id entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             while (entityId != EcsCore::INVALID) {
-                update(Entity(System::manager(), entityId), delta);
-                entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                update(Entity(Handler::manager(), entityId), delta);
+                entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
             }
             end(delta);
         }
@@ -264,21 +306,21 @@ namespace RtEcs {
 
             EcsCore::Entity_Id entityId;
             if (leftIntervals == 1) {
-                entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
 
                 while (entityId != EcsCore::INVALID) {
-                    update(Entity(System::manager(), entityId), overallDelta);
-                    entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                    update(Entity(Handler::manager(), entityId), overallDelta);
+                    entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
                 }
             }
             else {
-                EcsCore::uint32 amount = (System::manager()->getEntityAmount(IteratingSystem<Ts...>::setIteratorId) - treated) / leftIntervals;
+                EcsCore::uint32 amount = (Handler::manager()->getEntityAmount(IteratingSystem<Ts...>::setIteratorId) - treated) / leftIntervals;
 
                 for (EcsCore::uint32 i = 0; i < amount; i++) {
-                    entityId = System::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                    entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
                     if (entityId == EcsCore::INVALID)
                         break;
-                    update(Entity(System::manager(), entityId), overallDelta);
+                    update(Entity(Handler::manager(), entityId), overallDelta);
                 }
 
                 treated += amount;

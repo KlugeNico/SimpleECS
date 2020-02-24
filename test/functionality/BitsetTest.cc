@@ -1,4 +1,4 @@
-#include "../../ecs/Core.h"
+#include <SimpleECS/Core.h>
 #include "gtest/gtest.h"
 
 using std::cout;

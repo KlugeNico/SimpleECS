@@ -50,8 +50,7 @@
 #include <iostream>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
-#include "../../ecs/RealTimeEcs.h"
-#include "../../ecs/EventHandler.h"
+#include <SimpleECS/RealTimeEcs.h>
 
 using std::cerr;
 using std::cout;

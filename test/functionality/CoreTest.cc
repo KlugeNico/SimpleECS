@@ -1,5 +1,5 @@
 #include <thread>
-#include "../../ecs/Core.h"
+#include <SimpleECS/Core.h>
 #include "gtest/gtest.h"
 
 using std::cout;
@@ -28,7 +28,7 @@ struct Size {
 
 TEST (ManagerTest, TestManagerCreate) {
 
-    Manager manager = Manager();
+    Manager manager;
 
     std::vector<Entity_Id> entities = vector<Entity_Id>(40);
 
