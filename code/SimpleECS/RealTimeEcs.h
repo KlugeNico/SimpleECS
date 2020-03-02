@@ -12,6 +12,7 @@
 #define SIMPLE_ECS_ACCESS_H
 
 #include <type_traits>
+#include <memory>
 
 #include "Core.h"
 #include "EventHandler.h"
@@ -39,22 +40,6 @@ namespace RtEcs {
     using Listener = SimpleEH::Listener<T>;
 
     class RtManager;
-
-
-    class AutoDeleter {
-
-    public:
-        AutoDeleter(void* pointer, void(*deleteFunc)(void *)) : pointer(pointer), deleteFunc(deleteFunc) {}
-        ~AutoDeleter() {
-            deleteFunc(pointer);
-        }
-
-    private:
-        void* pointer;
-        void(*deleteFunc)(void *);
-
-    };
-
 
     class Entity {
 
@@ -112,8 +97,6 @@ namespace RtEcs {
     class Handler {
 
     public:
-        virtual ~Handler() = default;
-
         virtual void init(EcsCore::Manager* pManager, RtManager* pRtManager) {
             manager_ = pManager;
             rtManager_ = pRtManager;
@@ -204,21 +187,17 @@ namespace RtEcs {
             Handler::init (&managerObject, this);
         }
 
-        ~RtManager() override {
-            for (System* system : systems)
-                delete system;
-        }
-
         template <typename T, typename = std::enable_if_t<std::is_base_of<System, T>::value>>
         T* addSystem(T* system) {
             system->init(manager(), this);
-            systems.push_back(dynamic_cast<System*>(system));
+            systems.emplace_back(system);
+            makeAvailable(system);
             return system;
         }
 
         template<typename T>
         T* addSingleton(T* singleton) {
-            singletons.emplace_back(singleton,   [](void *p) { delete reinterpret_cast<T *>(p); }    );
+            singletons.emplace_back(singleton);
             makeAvailable(singleton);
             return singleton;
         }
@@ -235,14 +214,14 @@ namespace RtEcs {
         }
 
         void update(DELTA_TYPE delta) override {
-            for (System* system : systems) {
+            for (const auto& system : systems) {
                 system->update(delta);
             }
         }
 
     private:
-        std::vector<System*> systems;
-        std::vector<AutoDeleter> singletons;
+        std::vector<std::shared_ptr<System>> systems;
+        std::vector<std::shared_ptr<void>> singletons;
         EcsCore::Manager managerObject;
 
     };
