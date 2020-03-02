@@ -29,10 +29,12 @@ namespace RtEcs {
     using EcsCore::NOT_AVAILABLE;
     using EcsCore::Storing;
 
+#if CORE_ECS_EVENTS==1
     using EcsCore::ComponentAddedEvent;
     using EcsCore::ComponentDeletedEvent;
     using EcsCore::EntityCreatedEvent;
     using EcsCore::EntityErasedEvent;
+#endif
 
     typedef SimpleEH::Key Event_Key;
 
