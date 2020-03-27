@@ -100,9 +100,9 @@ struct Collideable {
 
 // Emitted when two entities collide.
 struct CollisionEvent {
-    CollisionEvent(EcsCore::Entity_Id left, EcsCore::Entity_Id right) : left(left), right(right) {}
+    CollisionEvent(EcsCore::EntityId left, EcsCore::EntityId right) : left(left), right(right) {}
 
-    EcsCore::Entity_Id left, right;
+    EcsCore::EntityId left, right;
 };
 
 
@@ -189,7 +189,7 @@ class CollisionSystem : public RtEcs::IntervalSystem<Body, Collideable> {
     struct Candidate {
         sf::Vector2f position;
         float radius;
-        EcsCore::Entity_Id entity;
+        EcsCore::EntityId entity;
     };
 
 public:
@@ -324,14 +324,14 @@ public:
     }
 
     void update(RtEcs::DELTA_TYPE delta) override {
-        for (EcsCore::Entity_Id entityId : collided) {
+        for (EcsCore::EntityId entityId : collided) {
             emit_particles(entityId);
             getEntity(entityId).erase();
         }
         collided.clear();
     }
 
-    void emit_particles(EcsCore::Entity_Id entityId) {
+    void emit_particles(EcsCore::EntityId entityId) {
         RtEcs::Entity entity = getEntity(entityId);
         auto* body = entity.getComponent<Body>();
         auto* renderable = entity.getComponent<Renderable>();
@@ -368,7 +368,7 @@ public:
     }
 
 private:
-    std::unordered_set<EcsCore::Entity_Id> collided;
+    std::unordered_set<uint64_t> collided;
 
 };
 

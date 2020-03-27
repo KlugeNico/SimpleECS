@@ -21,8 +21,8 @@ namespace RtEcs {
 
     typedef float DELTA_TYPE;
 
-    using EcsCore::Entity_Id;
-    using EcsCore::Entity_Index;
+    using EcsCore::EntityId;
+    using EcsCore::EntityIndex;
     using EcsCore::Key;
 
     using EcsCore::INVALID;
@@ -47,9 +47,9 @@ namespace RtEcs {
 
     public:
 
-        Entity() : manager(nullptr), entityId(0) {}
+        Entity() : manager(nullptr), entityId() {}
 
-        Entity(EcsCore::Manager *manager, EcsCore::Entity_Id entityId)
+        Entity(EcsCore::Manager *manager, EcsCore::EntityId entityId)
             : manager(manager), entityId(entityId) {
         }
 
@@ -71,7 +71,7 @@ namespace RtEcs {
             return manager->isValid(entityId);
         }
 
-        inline EcsCore::Entity_Index index() {
+        inline EcsCore::EntityIndex index() {
             return manager->getIndex(entityId);
         }
 
@@ -85,12 +85,12 @@ namespace RtEcs {
             return manager->getComponent<T>(entityId);
         }
 
-        inline EcsCore::Entity_Id id() const {
+        inline EcsCore::EntityId id() const {
             return entityId;
         }
 
     private:
-        EcsCore::Entity_Id entityId;
+        EcsCore::EntityId entityId;
         EcsCore::Manager* manager;
 
     };
@@ -104,11 +104,11 @@ namespace RtEcs {
             rtManager_ = pRtManager;
         }
 
-        Entity getEntity(EcsCore::Entity_Id entityId) {
+        Entity getEntity(EcsCore::EntityId entityId) {
             return {manager_, entityId};
         }
 
-        Entity getEntityByIndex(EcsCore::Entity_Index entityIndex) {
+        Entity getEntityByIndex(EcsCore::EntityIndex entityIndex) {
             return {manager_, manager_->getIdFromIndex(entityIndex)};
         }
 
@@ -117,7 +117,7 @@ namespace RtEcs {
         }
 
         template<typename T>
-        T* getComponent(EcsCore::Entity_Id entityId) {
+        T* getComponent(EcsCore::EntityId entityId) {
             return manager_->getComponent<T>(entityId);
         }
 
@@ -234,11 +234,11 @@ namespace RtEcs {
         friend RtManager;
 
     protected:
-        EcsCore::SetIterator_Id setIteratorId = 0;
+        EcsCore::SetIteratorId SetIteratorId = 0;
 
         void init(EcsCore::Manager *pManager, RtManager *pRtManager) override {
             Handler::init(pManager, pRtManager);
-            setIteratorId = pManager->createSetIterator<Ts...>();
+            SetIteratorId = pManager->createSetIterator<Ts...>();
         }
 
     };
@@ -255,10 +255,10 @@ namespace RtEcs {
 
         void update(DELTA_TYPE delta) override {
             start(delta);
-            EcsCore::Entity_Id entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
-            while (entityId != EcsCore::INVALID) {
+            EcsCore::EntityId entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
+            while (entityId.index != EcsCore::INVALID) {
                 update(Entity(Handler::manager(), entityId), delta);
-                entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
             }
             end(delta);
         }
@@ -285,21 +285,21 @@ namespace RtEcs {
             if (leftIntervals == intervals)
                 start(delta);
 
-            EcsCore::Entity_Id entityId;
+            EcsCore::EntityId entityId;
             if (leftIntervals == 1) {
-                entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
 
-                while (entityId != EcsCore::INVALID) {
+                while (entityId.index != EcsCore::INVALID) {
                     update(Entity(Handler::manager(), entityId), overallDelta);
-                    entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
+                    entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
                 }
             }
             else {
-                EcsCore::uint32 amount = (Handler::manager()->getEntityAmount(IteratingSystem<Ts...>::setIteratorId) - treated) / leftIntervals;
+                EcsCore::uint32 amount = (Handler::manager()->getEntityAmount(IteratingSystem<Ts...>::SetIteratorId) - treated) / leftIntervals;
 
                 for (EcsCore::uint32 i = 0; i < amount; i++) {
-                    entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::setIteratorId);
-                    if (entityId == EcsCore::INVALID)
+                    entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
+                    if (entityId.index == EcsCore::INVALID)
                         break;
                     update(Entity(Handler::manager(), entityId), overallDelta);
                 }

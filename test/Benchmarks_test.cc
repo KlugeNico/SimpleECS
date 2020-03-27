@@ -80,7 +80,7 @@ TEST_F(BenchmarkFixture, TestCreateEntities) {
 
 
 TEST_F(BenchmarkFixture, TestDestroyEntities) {
-  vector<EcsCore::Entity_Id> entities;
+  vector<EcsCore::EntityId> entities;
   for (uint64 i = 0; i < MAX_ENTITY_AMOUNT; i++) {
     entities.push_back(manager.createEntity());
   }
@@ -138,7 +138,7 @@ TEST_F(BenchmarkFixture, TestDestroyEntitiesWithListener) {
 TEST_F(BenchmarkFixture, TestEntityIteration) {
     int count = MAX_ENTITY_AMOUNT;
     manager.registerComponent<Position>(Key("Position"));
-    vector<uint64> entities;
+    vector<EcsCore::EntityId> entities;
 
     for (int i = 0; i < count; i++) {
         auto e = manager.createEntity();
@@ -158,7 +158,7 @@ TEST_F(BenchmarkFixture, TestEntityIterationUnpackTwo) {
     int count = MAX_ENTITY_AMOUNT;
     manager.registerComponent<Position>(Key("Position"));
     manager.registerComponent<Direction>(Key("Direction"));
-    vector<uint64> entities;
+    vector<EcsCore::EntityId> entities;
 
     for (int i = 0; i < count; i++) {
         auto e = manager.createEntity();
@@ -188,7 +188,7 @@ TEST_F(BenchmarkFixture, TestEntityIterationUnpackTen) {
     manager.registerComponent<C8>(Key("c8"));
     manager.registerComponent<C9>(Key("c9"));
     manager.registerComponent<C10>(Key("c10"));
-    vector<uint64> entities;
+    vector<EcsCore::EntityId> entities;
 
     for (int i = 0; i < count; i++) {
         auto e = manager.createEntity();

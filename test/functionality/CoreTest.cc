@@ -30,15 +30,15 @@ TEST (ManagerTest, TestManagerCreate) {
 
     Manager manager;
 
-    std::vector<Entity_Id> entities = vector<Entity_Id>(40);
+    std::vector<EntityId> entities = vector<EntityId>(40);
 
     cout << "Create Manager" << endl;
 
     manager.registerComponent<Position>("p", EcsCore::Storing::POINTER);
     manager.registerComponent<Size>("s", EcsCore::Storing::VALUE);
 
-    SetIterator_Id s1 = manager.createSetIterator<Position, Size>();
-    SetIterator_Id s2 = manager.createSetIterator<Position>();
+    SetIteratorId s1 = manager.createSetIterator<Position, Size>();
+    SetIteratorId s2 = manager.createSetIterator<Position>();
 
     ASSERT_EQ(manager.getEntityAmount(), 0);
 
@@ -85,18 +85,18 @@ TEST (ManagerTest, TestManagerCreate) {
     ASSERT_TRUE(manager.getComponent<Position>(entities[12]) == nullptr);
 
     uint32 amount = 0;
-    while (manager.nextEntity(s1) != INVALID) {
+    while (manager.nextEntity(s1).index != INVALID) {
         amount++;
     }
     ASSERT_EQ(amount, 7);
 
-    SetIterator_Id s3 = manager.createSetIterator<Size>();
+    SetIteratorId s3 = manager.createSetIterator<Size>();
 
     manager.addComponent(manager.createEntity(), Size(1));
     manager.addComponent(manager.createEntity(), Position());
 
     amount = 0;
-    while (manager.nextEntity(s3) != INVALID) {
+    while (manager.nextEntity(s3).index != INVALID) {
         amount++;
     }
     ASSERT_EQ(amount, 18);

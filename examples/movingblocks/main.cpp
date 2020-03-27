@@ -21,7 +21,7 @@
 #include <zconf.h>
 #include <SimpleECS/RealTimeEcs.h>
 
-using EcsCore::Entity_Id;
+using EcsCore::EntityId;
 
 static const int WORLD_SPAN = 8;
 static const int TILE_SCALING = 1;
@@ -124,12 +124,12 @@ struct World {
         return width * tileSize;
     }
 
-    std::forward_list<Entity_Id>* getEntities(int tileX, int tileY) {
+    std::forward_list<EntityId>* getEntities(int tileX, int tileY) {
         return &entities[tileY * width + tileX % width];
     }
 
 private:
-    std::vector<std::forward_list<Entity_Id>> entities;
+    std::vector<std::forward_list<EntityId>> entities;
 
 };
 World* world;
@@ -147,7 +147,7 @@ struct Player {
 struct Position {
 
 public:
-    Position (Entity_Id entityId, int x, int y) : entityId(entityId), x_(x), y_(y) {
+    Position (EntityId entityId, int x, int y) : entityId(entityId), x_(x), y_(y) {
         corral();
         world->getEntities(xInt() / world->tileSize, yInt() / world->tileSize)->push_front(entityId);
     }
@@ -175,7 +175,7 @@ public:
         return atan2(target->x() - x(), target->y() - y());
     }
 
-    std::vector<Entity_Id> getPotentiallyNearbyEntities(RtEcs::System *system, float distance = 0) {
+    std::vector<EntityId> getPotentiallyNearbyEntities(RtEcs::System *system, float distance = 0) {
 
         int tilesRadius = (int)distance / world->tileSize + 1;
 
@@ -189,11 +189,11 @@ public:
         if (endTileX >= world->width) endTileX = world->width - 1;
         if (endTileY >= world->height) endTileY = world->height - 1;
 
-        std::vector<Entity_Id> entities;
+        std::vector<EntityId> entities;
         float d2 = distance * distance;
         for (int x = startTileX; x <= endTileX; x++) {
             for (int y = startTileY; y <= endTileY; y++) {
-                for (Entity_Id oEntityId : *world->getEntities(x, y)) {
+                for (EntityId oEntityId : *world->getEntities(x, y)) {
                     entities.push_back(oEntityId);
                 }
             }
@@ -211,12 +211,12 @@ public:
     int xTile() const { return (int)x_ / world->tileSize; }
     int yTile() const { return (int)y_ / world->tileSize; }
 
-    Entity_Id getEntityId() const { return entityId; }
+    EntityId getEntityId() const { return entityId; }
 
 private:
     double x_ = 0;
     double y_ = 0;
-    Entity_Id entityId = 0;
+    EntityId entityId = 0;
 
     void corral() {
         if (x_ < 0)
@@ -296,7 +296,7 @@ struct Perception {
     : visionDistance(visionDistance) {}
 
     int visionDistance = 0;
-    std::vector<Entity_Id> inVision;
+    std::vector<EntityId> inVision;
 
 };
 
@@ -387,7 +387,7 @@ public:
         }
 
         // Draw all Creatures in Vision (also itself)
-        for (Entity_Id entityId : perception->inVision) {
+        for (EntityId entityId : perception->inVision) {
             RtEcs::Entity other = getEntity(entityId);
             auto* oP = other.getComponent<Position>();
             auto* oB = other.getComponent<Body>();
@@ -438,7 +438,7 @@ private:
         auto* position = entity.getComponent<Position>();
         auto* body = entity.getComponent<Body>();
 
-        for (Entity_Id entityId : position->getPotentiallyNearbyEntities(this)) {
+        for (EntityId entityId : position->getPotentiallyNearbyEntities(this)) {
             auto oPos = getComponent<Position>(entityId);
             auto oBody = getComponent<Body>(entityId);
 
@@ -481,7 +481,7 @@ public:
         auto* perception = entity.getComponent<Perception>();
 
         perception->inVision.clear();
-        for (Entity_Id entityId : position->getPotentiallyNearbyEntities(this, perception->visionDistance)) {
+        for (EntityId entityId : position->getPotentiallyNearbyEntities(this, perception->visionDistance)) {
             auto oPos = getEntity(entityId).getComponent<Position>();
             if (oPos != nullptr && position->inRange(oPos, perception->visionDistance))
                 perception->inVision.push_back(entityId);
@@ -506,7 +506,7 @@ public:
         switch (ki->type) {
             case KI::FOLLOWER:
 
-                for (Entity_Id entityId : perception->inVision) {
+                for (EntityId entityId : perception->inVision) {
                     auto* oMov = getComponent<Movement>(entityId);
                     auto* oPos = getComponent<Position>(entityId);
                     if (oMov != nullptr && oPos != nullptr && oMov->getSpeed2() > movement->getSpeed2()) {
