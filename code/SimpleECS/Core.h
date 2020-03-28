@@ -58,7 +58,8 @@ namespace EcsCore {
         uint32 index;
 
         EntityId() : version(0), index(0) {};
-        EntityId(uint64 asUint64) {
+
+        explicit EntityId(uint64 asUint64) {
             index = (uint32)asUint64;
             version = asUint64 >> 32u;
         };
@@ -69,7 +70,7 @@ namespace EcsCore {
         bool operator != (const EntityId& other) const {
             return index != other.index || version != other.version;
         }
-        operator uint64() const {
+        explicit operator uint64() const {
             return (((uint64) version) * POW_2_32 | index);
         }
     };
@@ -105,10 +106,10 @@ namespace EcsCore {
     namespace EcsCoreIntern {     // private
 
         template<size_t size>
-        struct Bitset {
+        struct BitSet {
 
         public:
-            Bitset() {
+            BitSet() {
                 arraySize = (size / BITSET_TYPE_SIZE) + 1;
             }
 
@@ -134,7 +135,7 @@ namespace EcsCore {
                 return ((bitset[bit / BITSET_TYPE_SIZE] >> (bit % BITSET_TYPE_SIZE)) & BITSET_TYPE(1u)) == 1u;
             }
 
-            inline bool contains(Bitset *other) {
+            inline bool contains(BitSet *other) {
                 for (size_t i = 0; i < arraySize; ++i)
                     if ((other->bitset[i] & ~bitset[i]) > 0u)
                         return false;
@@ -147,7 +148,7 @@ namespace EcsCore {
 
         };
 
-        typedef Bitset<MAX_COMPONENT_AMOUNT> ComponentBitset;
+        typedef BitSet<MAX_COMPONENT_AMOUNT> ComponentBitset;
 
         class EntityState {
 

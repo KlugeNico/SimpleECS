@@ -324,9 +324,9 @@ public:
     }
 
     void update(RtEcs::DELTA_TYPE delta) override {
-        for (EcsCore::EntityId entityId : collided) {
-            emit_particles(entityId);
-            getEntity(entityId).erase();
+        for (uint64_t entityIdAsLong : collided) {
+            emit_particles(EcsCore::EntityId(entityIdAsLong));
+            getEntity(EcsCore::EntityId(entityIdAsLong)).erase();
         }
         collided.clear();
     }
@@ -363,8 +363,8 @@ public:
     void receive(const CollisionEvent& collisionEvent) override {
         // Events are immutable, so we can't destroy the entities here. We defer
         // the work until the update loop.
-        collided.insert(collisionEvent.left);
-        collided.insert(collisionEvent.right);
+        collided.insert((uint64_t) collisionEvent.left);
+        collided.insert((uint64_t) collisionEvent.right);
     }
 
 private:

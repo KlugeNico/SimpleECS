@@ -17,7 +17,7 @@ struct Numbered {
 
 TEST (BitsetTest, TestSetBitset) {
 
-    Bitset<MAX_COMPONENTS> bitset = Bitset<MAX_COMPONENTS>();
+    BitSet<MAX_COMPONENTS> bitset = BitSet<MAX_COMPONENTS>();
 
     cout << "Set Bitset" << endl;
 
@@ -53,8 +53,8 @@ TEST (BitsetTest, TestSetBitset) {
 
 TEST (BitsetTest, TestBitsetContains) {
 
-    Bitset<MAX_COMPONENTS> bitsetOne = Bitset<MAX_COMPONENTS>();
-    Bitset<MAX_COMPONENTS> bitsetTwo = Bitset<MAX_COMPONENTS>();
+    BitSet<MAX_COMPONENTS> bitsetOne = BitSet<MAX_COMPONENTS>();
+    BitSet<MAX_COMPONENTS> bitsetTwo = BitSet<MAX_COMPONENTS>();
 
     cout << "Bitset contains Bitset" << endl;
 

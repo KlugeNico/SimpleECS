@@ -216,7 +216,7 @@ public:
 private:
     double x_ = 0;
     double y_ = 0;
-    EntityId entityId = 0;
+    EntityId entityId;
 
     void corral() {
         if (x_ < 0)
