@@ -11,23 +11,6 @@
 #ifndef SIMPLE_ECS_CORE_H
 #define SIMPLE_ECS_CORE_H
 
-#define POW_2_32 4294967296
-
-#define BITSET_TYPE std::uint8_t
-#define BITSET_TYPE_SIZE 8u
-
-#ifndef CORE_ECS_EVENTS
-    #define CORE_ECS_EVENTS 1
-#endif
-
-#ifndef MAX_COMPONENT_AMOUNT
-    #define MAX_COMPONENT_AMOUNT 63
-#endif
-
-#ifndef MAX_ENTITY_AMOUNT
-    #define MAX_ENTITY_AMOUNT 100000
-#endif
-
 #include <unordered_map>
 #include <vector>
 #include <forward_list>
@@ -37,56 +20,39 @@
 #include <typeinfo>
 #include <iostream>
 #include <cxxabi.h>
+
+#define POW_2_32 4294967296
+
+#define BITSET_TYPE std::uint8_t
+#define BITSET_TYPE_SIZE 8u
+
+#ifndef CORE_ECS_EVENTS
+#define CORE_ECS_EVENTS 1
+#endif
+
+#ifndef MAX_COMPONENT_AMOUNT
+#define MAX_COMPONENT_AMOUNT 63
+#endif
+
+#ifndef MAX_ENTITY_AMOUNT
+#define MAX_ENTITY_AMOUNT 100000
+#endif
+
+#include "Typedef.h"
 #include "EventHandler.h"
 
-namespace EcsCore {
-
-    enum Storing { POINTER, VALUE };
-    static const Storing DEFAULT_STORING = Storing::VALUE;
-
-    typedef std::uint32_t uint32;
-    typedef std::uint64_t uint64;
-    typedef uint32 EntityVersion;
-    typedef uint32 EntityIndex;
-    typedef uint32 ComponentId;
-    typedef uint32 SetIteratorId;
-    typedef uint32 InternIndex;
-    typedef std::string Key;
-
-    struct EntityId {
-        uint32 version;
-        uint32 index;
-
-        EntityId() : version(0), index(0) {};
-
-        explicit EntityId(uint64 asUint64) {
-            index = (uint32)asUint64;
-            version = asUint64 >> 32u;
-        };
-        EntityId(EntityVersion version, EntityIndex index) : version(version), index(index) {};
-        bool operator == (const EntityId& other) const {
-            return index == other.index && version == other.version;
-        }
-        bool operator != (const EntityId& other) const {
-            return index != other.index || version != other.version;
-        }
-        explicit operator uint64() const {
-            return (((uint64) version) * POW_2_32 | index);
-        }
-    };
+namespace sEcs {
 
     static const uint32 INVALID = 0;
     static const EntityId ENTITY_NULL;
     static const std::nullptr_t NOT_AVAILABLE = nullptr;
 
 #if CORE_ECS_EVENTS==1
-    template <typename T>
     struct ComponentAddedEvent {
         explicit ComponentAddedEvent (const EntityId& entityId) : entityId(entityId) {}
         EntityId entityId;
     };
 
-    template <typename T>
     struct ComponentDeletedEvent {
         explicit ComponentDeletedEvent (const EntityId& entityId) : entityId(entityId) {}
         EntityId entityId;
@@ -279,140 +245,71 @@ namespace EcsCore {
 
         };
 
-
-        struct ComponentInfo {
-            ComponentId id;
-            size_t typeSize;
-#if CORE_ECS_EVENTS==1
-            void (*emitDeleteEvent)(SimpleEH::SimpleEventHandler&, EntityId);
-#endif
-        };
-
-
-        class ComponentHandle {
-
-        public:
-            virtual ~ComponentHandle() = default;
-
-            explicit ComponentHandle(const ComponentInfo& componentInfo) :
-                    componentInfo(componentInfo) {}
-
-            ComponentId getComponentId() {
-                return componentInfo.id;
-            }
-
-            void destroyComponent(EntityId entityId, EntityIndex entityIndex
-#if CORE_ECS_EVENTS==1
-                    , SimpleEH::SimpleEventHandler& eventHandler
-#endif
-                    ) {
-                destroyComponentIntern(entityIndex);
-#if CORE_ECS_EVENTS==1
-                componentInfo.emitDeleteEvent(eventHandler, entityId);
-#endif
-            }
-
-            // only defined behavior for valid requests (entity and component exists)
-            virtual void* getComponent(EntityIndex entityIndex) = 0;
-
-            // only defined behavior for valid requests (entity exists and component not)
-            virtual void* createComponent(EntityIndex entityIndex) = 0;
-
-        protected:
-            ComponentInfo componentInfo;
-
-        private:
-            // only defined behavior for valid requests (entity and component exists)
-            virtual void destroyComponentIntern(EntityIndex entityIndex) = 0;
-
-        };
-
-
-        class PointingComponentHandle : public ComponentHandle {
-
-        public:
-            explicit PointingComponentHandle(const ComponentInfo& componentInfo, void(*deleteFunc)(void *)) :
-                    deleteFunc(deleteFunc), ComponentHandle(componentInfo),
-                    components(std::vector<void *>(MAX_ENTITY_AMOUNT + 1)) {}
-
-            ~PointingComponentHandle() override {
-                for (auto & component : components) {
-                    deleteFunc(component);
-                    component = nullptr;
-                }
-            }
-
-            void* getComponent(EntityIndex entityIndex) override {
-                return components[entityIndex];
-            }
-
-            void* createComponent(EntityIndex entityIndex) override {
-                return components[entityIndex] = malloc(componentInfo.typeSize);
-            }
-
-            void destroyComponentIntern(EntityIndex entityIndex) override {
-                deleteFunc(getComponent(entityIndex));
-                components[entityIndex] = nullptr;
-            }
-
-        private:
-            void (*deleteFunc)(void *);
-            std::vector<void *> components;
-
-        };
-
-
-        class ValuedComponentHandle : public ComponentHandle {
-
-        public:
-            explicit ValuedComponentHandle(const ComponentInfo& componentInfo, void(*destroyFunc)(void *)) :
-                    destroyFunc(destroyFunc), ComponentHandle(componentInfo) {
-                data = std::vector<char>((MAX_ENTITY_AMOUNT + 1) * componentInfo.typeSize);
-            }
-
-            void* getComponent(EntityIndex entityIndex) override {
-                return &data[entityIndex * componentInfo.typeSize];
-            }
-
-            void* createComponent(EntityIndex entityIndex) override {
-                return &data[entityIndex * componentInfo.typeSize];
-            }
-
-            void destroyComponentIntern(EntityIndex entityIndex) override {
-                destroyFunc(getComponent(entityIndex));
-            }
-
-        private:
-            void (*destroyFunc)(void *);
-            std::vector<char> data;
-
-        };
-
-
     }      // end private
 
 
-    class Manager : public SimpleEH::SimpleEventHandler {
+#if CORE_ECS_EVENTS == 1
+    struct ComponentEventInfo {
+        sEcs::uint32 addEventId = 0;
+        sEcs::uint32 deleteEventId = 0;
+    };
+#endif
+
+
+    class ComponentHandle {
 
     public:
-        Manager(const Manager&) = delete;
+        virtual ~ComponentHandle() = default;
 
-        explicit Manager() :
-                componentVector(std::vector<EcsCoreIntern::ComponentHandle *>(MAX_COMPONENT_AMOUNT + 1)),
-                entities(std::vector<EcsCoreIntern::EntityState>(MAX_ENTITY_AMOUNT + 1)) {
-            entities[0] = EcsCoreIntern::EntityState();
+        void destroyComponent(sEcs::EntityId entityId, sEcs::EntityIndex entityIndex) {
+            destroyComponentIntern(entityIndex);
         }
 
-        ~Manager() {
-            for (EcsCoreIntern::ComponentHandle *ch : componentVector) delete ch;
+        // only defined behavior for valid requests (entity and component exists)
+        virtual void* getComponent(sEcs::EntityIndex entityIndex) = 0;
+
+        // only defined behavior for valid requests (entity exists and component not)
+        virtual void* createComponent(sEcs::EntityIndex entityIndex) = 0;
+
+#if CORE_ECS_EVENTS == 1
+
+        ComponentEventInfo& getComponentEventInfo() {
+            return componentInfo;
+        }
+
+    protected:
+        ComponentEventInfo componentInfo;
+#endif
+
+    private:
+        // only defined behavior for valid requests (entity and component exists)
+        virtual void destroyComponentIntern(sEcs::EntityIndex entityIndex) = 0;
+
+    };
+
+
+    class Core : public sEcs::EventHandler {
+
+    public:
+
+        Core(const Core&) = delete;
+
+        explicit Core() :
+                entities(std::vector<EcsCoreIntern::EntityState>(MAX_ENTITY_AMOUNT + 1)) {
+            componentHandles.reserve(MAX_COMPONENT_AMOUNT + 1);
+            componentHandles.push_back(nullptr);
+            entities[0] = EcsCoreIntern::EntityState();
+            entityCreatedEventId = generateEvent();
+            entityErasedEventId = generateEvent();
+        }
+
+
+        ~Core() {
+            for (ComponentHandle *ch : componentHandles) delete ch;
             for (EcsCoreIntern::EntitySet *set : entitySets) delete set;
             for (EcsCoreIntern::SetIterator *setIterator : setIterators) delete setIterator;
-            for (EcsCoreIntern::ComponentHandle* (*func) (Manager*, const Key*, Storing)
-                    : getSetComponentHandleFuncList) {
-                Key resetCode(ECS_RESET_CODE);
-                func(this, &resetCode, DEFAULT_STORING);
-            }
         }
+
 
         EntityId createEntity() {
 
@@ -429,11 +326,13 @@ namespace EcsCore {
             EntityId entityId = entities[index].id(index);
 
 #if CORE_ECS_EVENTS==1
-            emitEvent(EntityCreatedEvent(entityId));
+            auto event = EntityCreatedEvent(entityId);
+            emitEvent(entityCreatedEventId, &event);
 #endif
 
             return entityId;
         }
+
 
         bool isValid(EntityId entityId) {
             return getIndex(entityId) != INVALID;
@@ -446,19 +345,20 @@ namespace EcsCore {
                 return false;
 
 #if CORE_ECS_EVENTS==1
-            emitEvent(EntityErasedEvent(entityId));
+            auto eventErased = EntityErasedEvent(entityId);
+            emitEvent(entityErasedEventId, &eventErased);
 #endif
 
             EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
 
-            for (ComponentId i = 1; i <= lastComponentIndex; i++) {
-                EcsCoreIntern::ComponentHandle *ch = componentVector[i];
-                if (originally.isSet(ch->getComponentId())) {   // Only delete existing components
-                    ch->destroyComponent(entityId, index
-#if CORE_ECS_EVENTS==1
-                    , *this
+            for (ComponentId i = 1; i < componentHandles.size(); i++) {
+                ComponentHandle *ch = componentHandles[i];
+                if (originally.isSet(i)) {   // Only delete existing components
+                    ch->destroyComponent(entityId, index);
+#if CORE_ECS_EVENTS == 1
+                    auto event = ComponentDeletedEvent(entityId);
+                    emitEvent(ch->getComponentEventInfo().deleteEventId, &event);
 #endif
-                    );
                 }
             }
 
@@ -470,197 +370,125 @@ namespace EcsCore {
             return true;
         }
 
-        template<typename T>
-        void registerComponent(Key componentKey, Storing storing = DEFAULT_STORING) {
-            getSetComponentHandle<T>(this, &componentKey, storing);
+
+        ComponentId registerComponent(ComponentHandle* ch) {
+
+            if (componentHandles.size() >= MAX_COMPONENT_AMOUNT) {
+                throw std::length_error("To many component types registered! Define by MAX_COMPONENT_AMOUNT.");
+            }
+
+#if CORE_ECS_EVENTS==1
+            ComponentEventInfo& componentInfo = ch->getComponentEventInfo();
+            componentInfo.addEventId = generateEvent();
+            componentInfo.deleteEventId = generateEvent();
+#endif
+            componentHandles.push_back(ch);
+
+            return componentHandles.size() - 1;
         }
 
-        template <typename T>
-        T* addComponent(EntityId entityId, T&& component) {
-
-            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>(this, nullptr, VALUE);
-
-            EntityIndex index = addComponentAdjustmentTypeless(entityId, ch);
-            if (index == INVALID)
-                return nullptr;
-
-            addComponentsToComponentHandles<T>(index, component);
-
-            return getComponent<T>(entityId);
-        }
-
-        template<typename ... Ts>
-        bool addComponents(EntityId entityId, Ts&&... components) {
-
-            std::vector<EcsCoreIntern::ComponentHandle*> chs = std::vector<EcsCoreIntern::ComponentHandle*>(sizeof...(Ts));
-            insertComponentHandles<void, Ts...>(&chs, 0);
-
-            EntityIndex index = addComponentsAdjustmentTypeless(entityId, chs);
-            if (index == INVALID)
-                return false;
-
-            addComponentsToComponentHandles(index, std::forward<Ts>(components) ...);
-            return true;
-        }
-
-        template<typename T>
-        T *getComponent(EntityId entityId) {
+        void* addComponent(EntityId entityId, ComponentId componentId) {
 
             EntityIndex index = getIndex(entityId);
             if (index == INVALID)
                 return nullptr;
 
-            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>(this, nullptr, VALUE);
-
-            if (entities[index].getComponentMask()->isSet(ch->getComponentId()))
-                return reinterpret_cast<T *>(ch->getComponent(index));
-
-            return nullptr;
-        }
-
-        template<typename T>
-        bool deleteComponent(EntityId entityId) {
-            EcsCoreIntern::ComponentHandle* ch = getSetComponentHandle<T>(this, nullptr, VALUE);
-            return deleteComponentTypeless(entityId, ch);
-        }
-
-        template<typename ... Ts>
-        SetIteratorId createSetIterator() {
-            if (sizeof...(Ts) < 1)
-                throw std::invalid_argument("SetIterator must subserve at least one Component!");
-
-            std::vector<ComponentId> componentIds = std::vector<ComponentId>(sizeof...(Ts));
-            insertComponentIds<Ts...>(&componentIds);
-
-            return createSetIteratorTypeless(componentIds);
-        }
-
-        inline EntityId nextEntity(SetIteratorId setIteratorId) {
-            EntityIndex nextIndex = setIterators[setIteratorId]->next();
-            return entities[nextIndex].id(nextIndex);
-        }
-
-        uint32 getEntityAmount(SetIteratorId setIteratorId) {
-            return setIterators[setIteratorId]->getEntitySet()->getVagueAmount();
-        }
-
-        template<typename ... Ts>
-        uint32 getEntityAmount() {
-            static SetIteratorId setIteratorId = createSetIterator<Ts...>();
-            while (nextEntity(setIteratorId).version != INVALID);
-            return setIterators[setIteratorId]->getEntitySet()->getVagueAmount();
-        }
-
-        inline uint32 getEntityAmount() {
-            return lastEntityIndex - freeEntityIndices.size();
-        }
-
-        template<typename S_T>
-        inline void makeAvailable(S_T* object) {
-            getSetSingleton(object);
-        }
-
-        template<typename S_T>
-        inline S_T* access() {
-            return getSetSingleton<S_T>();
-        }
-
-        inline EntityIndex getIndex(EntityId entityId) {
-            if (entityId.index > lastEntityIndex)
-                return INVALID;
-            if (entityId.version != entities[entityId.index].version)
-                return INVALID;
-            return entityId.index;
-        }
-
-        EntityId getIdFromIndex(EntityIndex index) {
-            if (index > lastEntityIndex)
-                return ENTITY_NULL;
-            return {entities[index].version, index};
-        }
-
-    private:
-        EntityIndex lastEntityIndex = 0;
-        std::vector<EcsCoreIntern::EntityState> entities;
-
-        std::vector<EntityIndex> freeEntityIndices;
-
-        ComponentId lastComponentIndex = 0;
-        std::unordered_map<Key, EcsCoreIntern::ComponentHandle *> componentMap;
-        std::vector<EcsCoreIntern::ComponentHandle *> componentVector;
-
-        std::vector<EcsCoreIntern::EntitySet *> entitySets;
-        std::vector<EcsCoreIntern::SetIterator *> setIterators;
-
-        std::vector<EcsCoreIntern::ComponentHandle* (*) (Manager*, const Key*, Storing)> getSetComponentHandleFuncList;
-
-        std::unordered_map<Key, void*> singletons;
-
-
-        EntityIndex addComponentAdjustmentTypeless(EntityId entityId, EcsCoreIntern::ComponentHandle* componentHandle) {
-
-            EntityIndex index = getIndex(entityId);
-            if (index == INVALID)
-                return INVALID;
-
-            ComponentId componentId = componentHandle->getComponentId();
+            ComponentHandle* ch = componentHandles[componentId];
             EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
 
             if (!originally.isSet( componentId )) {   // Only update if component type is new for entity
                 entities[index].getComponentMask()->set( componentId );
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
             } else {
-                componentHandle->destroyComponent(entityId, index
-#if CORE_ECS_EVENTS==1
-                , *this
+                ch->destroyComponent(entityId, index);
+#if CORE_ECS_EVENTS == 1
+                auto event = ComponentDeletedEvent(entityId);
+                emitEvent(ch->getComponentEventInfo().deleteEventId, &event);
 #endif
-                );
             }
-            return index;
+
+            void* comp = ch->createComponent(index);
+
+#if CORE_ECS_EVENTS==1
+            auto event = ComponentAddedEvent(entityId);
+            emitEvent(ch->getComponentEventInfo().addEventId, &event);
+#endif
+
+            return comp;
         }
 
-        EntityIndex addComponentsAdjustmentTypeless(EntityId entityId, std::vector<EcsCoreIntern::ComponentHandle*>& chs) {
-            EntityIndex index = getIndex(entityId);
-            if (index == INVALID)
-                return INVALID;
 
-            EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
+        // OptimizeAble
+        bool activateComponents(EntityId entityId, const ComponentId* ids, size_t idsAmount) {
 
-            bool modified = false;
-            for (EcsCoreIntern::ComponentHandle* ch : chs)
-                if (originally.isSet(ch->getComponentId()))
-                    ch->destroyComponent(entityId, index
-#if CORE_ECS_EVENTS==1
-            , *this
-#endif
-                    );
-                else
-                    modified = true;
-
-            if (modified) {   // Only update if component types are new for entity
-
-                for (EcsCoreIntern::ComponentHandle* ch : chs)
-                    entities[index].getComponentMask()->set(ch->getComponentId());
-
-                updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
-            }
-            return index;
-        }
-
-        bool deleteComponentTypeless(EntityId entityId, EcsCoreIntern::ComponentHandle* ch) {
             EntityIndex index = getIndex(entityId);
             if (index == INVALID)
                 return false;
 
             EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
 
-            if (originally.isSet(ch->getComponentId())) {
-                ch->destroyComponent(entityId, index
-#if CORE_ECS_EVENTS==1
-                , *this
+            bool modified = false;
+            for (uint32 i = 0; i < idsAmount; i++) {
+                ComponentHandle* ch = componentHandles[ids[i]];
+                if (originally.isSet(ids[i])) {
+                    ch->destroyComponent(entityId, index);
+#if CORE_ECS_EVENTS == 1
+                    auto event = ComponentDeletedEvent(entityId);
+                    emitEvent(ch->getComponentEventInfo().deleteEventId, &event);
 #endif
-                );
-                entities[index].getComponentMask()->unset( ch->getComponentId() );
+                }
+                else
+                    modified = true;
+            }
+
+            if (modified) {   // Only update if component types are new for entity
+
+                for (uint32 i = 0; i < idsAmount; i++)
+                    entities[index].getComponentMask()->set(ids[i]);
+
+                updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
+            }
+
+#if CORE_ECS_EVENTS==1
+            for (uint32 i = 0; i < idsAmount; i++) {
+                ComponentHandle* ch = componentHandles[ids[i]];
+                auto event = ComponentAddedEvent(entityId);
+                emitEvent(ch->getComponentEventInfo().addEventId, &event);
+            }
+#endif
+
+            return true;
+        }
+
+
+        void* getComponent(EntityId entityId, ComponentId componentId) {
+
+            EntityIndex index = getIndex(entityId);
+            if (index == INVALID)
+                return nullptr;
+
+            if (!entities[index].getComponentMask()->isSet(componentId))
+                return nullptr;
+
+            return componentHandles[componentId]->getComponent(index);
+        }
+
+
+        bool deleteComponent(EntityId entityId, ComponentId componentId) {
+            EntityIndex index = getIndex(entityId);
+            if (index == INVALID)
+                return false;
+
+            EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
+
+            if (originally.isSet(componentId)) {
+                auto* ch = componentHandles[componentId];
+                ch->destroyComponent(entityId, index);
+#if CORE_ECS_EVENTS == 1
+                auto event = ComponentDeletedEvent(entityId);
+                emitEvent(ch->getComponentEventInfo().deleteEventId, &event);
+#endif
+                entities[index].getComponentMask()->unset( componentId );
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
                 return true;
             }
@@ -668,7 +496,9 @@ namespace EcsCore {
             return false;
         }
 
-        SetIteratorId createSetIteratorTypeless(std::vector<ComponentId>& componentIds) {
+
+        SetIteratorId createSetIterator(std::vector<ComponentId> componentIds) {
+
             std::sort(componentIds.begin(), componentIds.end());
             EcsCoreIntern::EntitySet *entitySet = nullptr;
 
@@ -689,132 +519,67 @@ namespace EcsCore {
             return static_cast<SetIteratorId>(setIterators.size() - 1);
         }
 
-        template<typename ... Ts>
-        void insertComponentIds(std::vector<ComponentId> *ids) {
-            std::vector<EcsCoreIntern::ComponentHandle*> chs = std::vector<EcsCoreIntern::ComponentHandle*>(sizeof...(Ts));
-            insertComponentHandles<void, Ts...>(&chs, 0);
-            for (size_t i = 0; i < chs.size(); i++) {
-                (*ids)[i] = chs[i]->getComponentId();
-            }
+
+        inline EntityId nextEntity(SetIteratorId setIteratorId) {
+            EntityIndex nextIndex = setIterators[setIteratorId]->next();
+            return entities[nextIndex].id(nextIndex);
         }
 
-        template<typename V>
-        void insertComponentHandles(std::vector<EcsCoreIntern::ComponentHandle *> *chs, int index) {
+
+        uint32 getEntityAmount(SetIteratorId setIteratorId) {
+            return setIterators[setIteratorId]->getEntitySet()->getVagueAmount();
         }
 
-        template<typename V, typename T, typename... Ts>
-        void insertComponentHandles(std::vector<EcsCoreIntern::ComponentHandle *> *chs, int index) {
-            (*chs)[index] = getSetComponentHandle<T>(this, nullptr, VALUE);
-            insertComponentHandles<V, Ts...>(chs, ++index);
+
+        uint32 getEntityAmount(std::vector<ComponentId>& componentIds) {
+            static SetIteratorId setIteratorId = createSetIterator(componentIds);
+            while (nextEntity(setIteratorId).version != INVALID);
+            return setIterators[setIteratorId]->getEntitySet()->getVagueAmount();
         }
 
-        template<typename T>
-        void addComponentsToComponentHandles(EntityIndex index, T component) {
-            void* p = getSetComponentHandle<T>(this, nullptr, VALUE)->createComponent(index);
-            new(p) T(std::move(component));
-#if CORE_ECS_EVENTS==1
-            emitEvent(ComponentAddedEvent<T>(entities[index].id(index)));
-#endif
+
+        inline uint32 getEntityAmount() {
+            return lastEntityIndex - freeEntityIndices.size();
         }
 
-        template<typename T, typename... Ts>
-        void addComponentsToComponentHandles(EntityIndex index, T&& component, Ts&&... components) {
-            addComponentsToComponentHandles<T>(index, component);
-            addComponentsToComponentHandles<Ts...>(index, std::forward<Ts>(components)...);
+
+        inline EntityIndex getIndex(EntityId entityId) {
+            if (entityId.index > lastEntityIndex)
+                return INVALID;
+            if (entityId.version != entities[entityId.index].version)
+                return INVALID;
+            return entityId.index;
         }
 
-        template<typename T>
-        EcsCoreIntern::ComponentHandle *linkComponentHandle(const Key* componentKey, Storing storing,
-                                                            EcsCoreIntern::ComponentHandle* (*getSetComponentHandleFunc) (Manager*, const Key*, Storing)) {
-            if (!componentKey) {
-                std::ostringstream oss;
-                oss << "Tried to access unregistered component: " << typeid(T).name();
-                throw std::invalid_argument(oss.str());
-            }
-            if (componentMap[*componentKey] == nullptr) {
-                EcsCoreIntern::ComponentHandle* chp;
-                EcsCoreIntern::ComponentInfo componentInfo = EcsCoreIntern::ComponentInfo();
 
-                componentInfo.id = ++lastComponentIndex;
-                componentInfo.typeSize = sizeof(T);
-#if CORE_ECS_EVENTS==1
-                componentInfo.emitDeleteEvent = &emitDeleteEvent<T>;
+        EntityId getIdFromIndex(EntityIndex index) {
+            if (index > lastEntityIndex)
+                return ENTITY_NULL;
+            return {entities[index].version, index};
+        }
+
+
+    private:
+        EntityIndex lastEntityIndex = 0;
+
+#if CORE_ECS_EVENTS == 1
+        uint32 entityCreatedEventId = generateEvent();
+        uint32 entityErasedEventId = generateEvent();
 #endif
 
-                switch (storing) {
-                    case POINTER:
-                        chp = new EcsCoreIntern::PointingComponentHandle(componentInfo,
-                                [](void *p) { delete reinterpret_cast<T *>(p); }   );
-                        break;
-                    default:
-                        chp = new EcsCoreIntern::ValuedComponentHandle(componentInfo,
-                                [](void *p) { reinterpret_cast<T *>(p)->~T(); }    );
-                        break;
-                }
-                componentMap[*componentKey] = chp;
-                componentVector[chp->getComponentId()] = chp;
-                getSetComponentHandleFuncList.emplace_back(getSetComponentHandleFunc);
-            }
-            EcsCoreIntern::ComponentHandle *ch = componentMap[*componentKey];
-            return ch;
-        }
+        std::vector<EcsCoreIntern::EntityState> entities;
+        std::vector<EntityIndex> freeEntityIndices;
 
-        template<typename T>
-        static EcsCoreIntern::ComponentHandle* getSetComponentHandle(
-                Manager* instance, const Key* componentKey = nullptr, Storing storing = DEFAULT_STORING) {
+        std::vector<ComponentHandle *> componentHandles;
 
-            static EcsCoreIntern::ComponentHandle* componentHandle =
-                    instance->linkComponentHandle<T>(componentKey, storing, &getSetComponentHandle<T>);
-
-            if (componentKey)
-                if (*componentKey == ECS_RESET_CODE)
-                    componentHandle = nullptr;
-                else
-                    componentHandle = instance->linkComponentHandle<T>(componentKey, storing, &getSetComponentHandle<T>);
-
-            else if (!componentHandle) {
-                std::ostringstream oss;
-                oss << "Tried to access unregistered component: " << typeid(T).name();
-                throw std::invalid_argument(oss.str());
-            }
-
-            return componentHandle;
-        }
+        std::vector<EcsCoreIntern::EntitySet *> entitySets;
+        std::vector<EcsCoreIntern::SetIterator *> setIterators;
 
         void updateAllMemberships(EntityId entityId, EcsCoreIntern::ComponentBitset *previous, EcsCoreIntern::ComponentBitset *recent) {
             for (EcsCoreIntern::EntitySet *set : entitySets) {
                 set->updateMembership(entityId.index, previous, recent);
             }
         }
-
-        template<typename T>
-        T* getSetSingleton(T* object = nullptr) {
-            static T* singleton = object;
-            if (object || !singleton) {
-                Key className = cleanClassName(typeid(T).name());
-                if (object) {
-                    singleton = object;
-                    singletons[className] = singleton;
-                }
-                else {
-                    if (singletons[className])
-                        singleton = reinterpret_cast<T *>(singletons[className]);
-                    else {
-                        std::ostringstream oss;
-                        oss << "Tried to access unregistered Type: " << typeid(T).name() << ". Use makeAvailable.";
-                        throw std::invalid_argument(oss.str());
-                    }
-                }
-            }
-            return singleton;
-        }
-
-#if CORE_ECS_EVENTS==1
-        template<typename T>
-        static void emitDeleteEvent(SimpleEH::SimpleEventHandler& eventHandler, EntityId entityId) {
-            eventHandler.emitEvent(ComponentDeletedEvent<T>(entityId));
-        }
-#endif
 
     };
 

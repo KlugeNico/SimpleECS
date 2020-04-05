@@ -35,7 +35,7 @@ Components are stored in ComponentHandles. The ComponentHandles are containing t
 
 ## Usage
 
-The project contains a [Core](code/SimpleECS/Core.h) file, which is a standalone header file with all main functionality. Because using the core directly is a little bit unhandy there is also a [Wrapper for real time applications](code/SimpleECS/RealTimeEcs.h) (supports fps and comfortable systems). Additional there is an external [EventHandler](code/SimpleECS/EventHandler.h).
+The project contains a [Core](code/SimpleECS/Core.h) file, which is a standalone header file with all main functionality. Because using the core directly is a little bit unhandy there is also a [Wrapper for real time applications](code/SimpleECS/TypeWrapper.h) (supports fps and comfortable systems). Additional there is an external [EventHandler](code/SimpleECS/EventHandler.h).
 
 The ECS takes care about the deletion of removed components. Also if the entity gets deleted. So you should not assign one component object to multiple entities.
 

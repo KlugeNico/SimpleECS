@@ -6,7 +6,7 @@ using std::cout;
 using std::endl;
 using std::vector;
 
-using namespace EcsCore;
+using namespace sEcs;
 
 uint32 MAX_ENTITIES_RT = 5000;
 const size_t COMPONENT_AMOUNT = 50;
@@ -28,14 +28,14 @@ struct Size {
 
 TEST (ManagerTest, TestManagerCreate) {
 
-    Manager manager;
+    Core manager;
 
     std::vector<EntityId> entities = vector<EntityId>(40);
 
     cout << "Create Manager" << endl;
 
-    manager.registerComponent<Position>("p", EcsCore::Storing::POINTER);
-    manager.registerComponent<Size>("s", EcsCore::Storing::VALUE);
+    manager.registerComponent<Position>("p", sEcs::Storing::POINTER);
+    manager.registerComponent<Size>("s", sEcs::Storing::VALUE);
 
     SetIteratorId s1 = manager.createSetIterator<Position, Size>();
     SetIteratorId s2 = manager.createSetIterator<Position>();

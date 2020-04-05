@@ -19,9 +19,9 @@
 #include <forward_list>
 #include <climits>
 #include <zconf.h>
-#include <SimpleECS/RealTimeEcs.h>
+#include <SimpleECS/TypeWrapper.h>
 
-using EcsCore::EntityId;
+using sEcs::EntityId;
 
 static const int WORLD_SPAN = 8;
 static const int TILE_SCALING = 1;
@@ -47,7 +47,7 @@ static bool quit = false;
 
 static SDL_Window* window;
 static SDL_Renderer* renderer;
-static RtEcs::RtManager* rtEcs;
+static sEcs::RtManager* rtEcs;
 
 static const char FONT_FILE[] = "VeraMono-Bold.ttf";
 static const char SEPARATOR =
@@ -175,7 +175,7 @@ public:
         return atan2(target->x() - x(), target->y() - y());
     }
 
-    std::vector<EntityId> getPotentiallyNearbyEntities(RtEcs::System *system, float distance = 0) {
+    std::vector<EntityId> getPotentiallyNearbyEntities(sEcs::System *system, float distance = 0) {
 
         int tilesRadius = (int)distance / world->tileSize + 1;
 
@@ -316,12 +316,12 @@ struct KI {
 //////////////////         SYSTEMS          ///////////////////////
 ///////////////////////////////////////////////////////////////////
 
-class PlayerSystem : public RtEcs::System {
+class PlayerSystem : public sEcs::System {
 
 public:
-    explicit PlayerSystem (RtEcs::Entity player) : player(player) {}
+    explicit PlayerSystem (sEcs::Entity player) : player(player) {}
 
-    RtEcs::Entity player;
+    sEcs::Entity player;
 
     void update(float delta) override {
         //Handle events on queue
@@ -388,7 +388,7 @@ public:
 
         // Draw all Creatures in Vision (also itself)
         for (EntityId entityId : perception->inVision) {
-            RtEcs::Entity other = getEntity(entityId);
+            sEcs::Entity other = getEntity(entityId);
             auto* oP = other.getComponent<Position>();
             auto* oB = other.getComponent<Body>();
             if (oP != nullptr && oB != nullptr) {
@@ -409,14 +409,14 @@ public:
 };
 
 
-class MoveSystem : public RtEcs::IntervalSystem<Movement, Position> {
+class MoveSystem : public sEcs::IntervalSystem<Movement, Position> {
 
 public:
-    MoveSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
+    MoveSystem(sEcs::uint32 intervals) : IntervalSystem(intervals) {}
 
 private:
 
-    void update(RtEcs::Entity entity, float delta) override {
+    void update(sEcs::Entity entity, float delta) override {
 
         auto* position = entity.getComponent<Position>();
         auto* movement = entity.getComponent<Movement>();
@@ -426,14 +426,14 @@ private:
 };
 
 
-class CollisionSystem : public RtEcs::IntervalSystem<Movement, Position, Body> {
+class CollisionSystem : public sEcs::IntervalSystem<Movement, Position, Body> {
 
 public:
-    CollisionSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
+    CollisionSystem(sEcs::uint32 intervals) : IntervalSystem(intervals) {}
 
 private:
 
-    void update(RtEcs::Entity entity, float delta) override {
+    void update(sEcs::Entity entity, float delta) override {
 
         auto* position = entity.getComponent<Position>();
         auto* body = entity.getComponent<Body>();
@@ -471,12 +471,12 @@ private:
 };
 
 
-class PerceptionSystem : public RtEcs::IntervalSystem<Perception, Position> {
+class PerceptionSystem : public sEcs::IntervalSystem<Perception, Position> {
 
 public:
-    PerceptionSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
+    PerceptionSystem(sEcs::uint32 intervals) : IntervalSystem(intervals) {}
 
-    void update(RtEcs::Entity entity, float delta) override {
+    void update(sEcs::Entity entity, float delta) override {
         auto* position = entity.getComponent<Position>();
         auto* perception = entity.getComponent<Perception>();
 
@@ -490,14 +490,14 @@ public:
 };
 
 
-class KISystem : public RtEcs::IntervalSystem<KI, Perception, Position, Movement> {
+class KISystem : public sEcs::IntervalSystem<KI, Perception, Position, Movement> {
 
 public:
-    KISystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
+    KISystem(sEcs::uint32 intervals) : IntervalSystem(intervals) {}
 
 public:
 
-    void update(RtEcs::Entity entity, float delta) override {
+    void update(sEcs::Entity entity, float delta) override {
         auto* ki = entity.getComponent<KI>();
         auto* perception = entity.getComponent<Perception>();
         auto* position = entity.getComponent<Position>();
@@ -564,7 +564,7 @@ void initSdl() {
 
 void initRtEcs() {
 
-    rtEcs = new RtEcs::RtManager();
+    rtEcs = new sEcs::RtManager();
 
     rtEcs->registerComponent<Player>("player");
     rtEcs->registerComponent<Position>("position");
@@ -575,7 +575,7 @@ void initRtEcs() {
 
     world = new World(WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE);
 
-    RtEcs::Entity player = rtEcs->createEntity();
+    sEcs::Entity player = rtEcs->createEntity();
 
     player.addComponent(Player());
     player.addComponent(Position(player.id(), WORLD_WIDTH * 64, WORLD_HEIGHT * 64));
@@ -587,13 +587,13 @@ void initRtEcs() {
     RandomNumberGenerator randY(1, world->pixHeight() - 1);
 
     for (int i = 0; i < TREE_SPAWN; i++) {
-        RtEcs::Entity tree = rtEcs->createEntity();
+        sEcs::Entity tree = rtEcs->createEntity();
         tree.addComponent(Position(tree.id(), randX.get(), randY.get()));
         tree.addComponent(Body(20, 32, 128, 16));
     }
 
     for (int i = 0; i < FOLLOWER_SPAWN; i++) {
-        RtEcs::Entity follower = rtEcs->createEntity();
+        sEcs::Entity follower = rtEcs->createEntity();
         follower.addComponent(Position(follower.id(), randX.get(), randY.get()));
         follower.addComponent(Body(20, 32, 32, 128));
         follower.addComponent(Perception(FOLLOWER_PERCEPTION));

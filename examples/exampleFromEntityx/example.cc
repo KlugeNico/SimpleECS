@@ -50,7 +50,11 @@
 #include <iostream>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
-#include <SimpleECS/RealTimeEcs.h>
+
+#include <SimpleECS/TypeWrapper.h>
+#include <SimpleECS/Systems.h>
+
+using namespace sEcs;
 
 using std::cerr;
 using std::cout;
@@ -100,23 +104,23 @@ struct Collideable {
 
 // Emitted when two entities collide.
 struct CollisionEvent {
-    CollisionEvent(EcsCore::EntityId left, EcsCore::EntityId right) : left(left), right(right) {}
+    CollisionEvent(sEcs::EntityId left, sEcs::EntityId right) : left(left), right(right) {}
 
-    EcsCore::EntityId left, right;
+    sEcs::EntityId left, right;
 };
 
 
-class SpawnSystem : public RtEcs::System {
+class SpawnSystem : public sEcs::System {
 public:
 
     explicit SpawnSystem(sf::RenderTarget &target, int count) : size(target.getSize()), count(count) {}
 
-    void update(RtEcs::DELTA_TYPE delta) override {
+    void update(sEcs::DELTA_TYPE delta) override {
 
         int c = countEntities<Collideable>();
 
         for (int i = 0; i < count - c; i++) {
-            RtEcs::Entity entity = createEntity();
+            sEcs::Entity entity = createEntity();
 
             entity.addComponents(
                 Collideable(r(10, 5)),
@@ -142,10 +146,10 @@ private:
 
 
 // Updates a body's position and rotation.
-struct BodySystem : public RtEcs::IntervalSystem<Body> {
-    BodySystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
+struct BodySystem : public sEcs::IntervalSystem<Body> {
+    BodySystem(sEcs::uint32 intervals) : IntervalSystem(intervals) {}
 
-    void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
+    void update(sEcs::Entity entity, sEcs::DELTA_TYPE delta) override {
 
         Body* body = entity.getComponent<Body>();
         body->position += body->direction * delta;
@@ -157,12 +161,12 @@ struct BodySystem : public RtEcs::IntervalSystem<Body> {
 
 
 // Bounce bodies off the edge of the screen.
-class BounceSystem : public RtEcs::IntervalSystem<Body> {
+class BounceSystem : public sEcs::IntervalSystem<Body> {
 public:
-    explicit BounceSystem(EcsCore::uint32 intervals, sf::RenderTarget &target) : IntervalSystem(
+    explicit BounceSystem(sEcs::uint32 intervals, sf::RenderTarget &target) : IntervalSystem(
             intervals), size(target.getSize()) {}
 
-    void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
+    void update(sEcs::Entity entity, sEcs::DELTA_TYPE delta) override {
         auto* body = entity.getComponent<Body>();
         if (body->position.x + body->direction.x < 0 ||
             body->position.x + body->direction.x >= size.x)
@@ -183,31 +187,31 @@ private:
 // sound, etc..
 //
 // Uses a fairly rudimentary 2D partition system, but performs reasonably well.
-class CollisionSystem : public RtEcs::IntervalSystem<Body, Collideable> {
+class CollisionSystem : public sEcs::IntervalSystem<Body, Collideable> {
     static const int PARTITIONS = 200;
 
     struct Candidate {
         sf::Vector2f position;
         float radius;
-        EcsCore::EntityId entity;
+        sEcs::EntityId entity;
     };
 
 public:
-    explicit CollisionSystem(EcsCore::uint32 intervals, sf::RenderTarget &target)
+    explicit CollisionSystem(sEcs::uint32 intervals, sf::RenderTarget &target)
             : IntervalSystem(intervals), size(target.getSize()) {
         size.x = size.x / PARTITIONS + 1;
         size.y = size.y / PARTITIONS + 1;
     }
 
-    void start(RtEcs::DELTA_TYPE delta) override {
+    void start(sEcs::DELTA_TYPE delta) override {
         reset();
     }
 
-    void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
+    void update(sEcs::Entity entity, sEcs::DELTA_TYPE delta) override {
         collect(entity);
     };
 
-    void end(RtEcs::DELTA_TYPE delta) override {
+    void end(sEcs::DELTA_TYPE delta) override {
         collide();
     }
 
@@ -220,7 +224,7 @@ private:
         grid.resize(size.x * size.y);
     }
 
-    void collect(RtEcs::Entity entity) {
+    void collect(sEcs::Entity entity) {
         auto* body = entity.getComponent<Body>();
         auto* collideable = entity.getComponent<Collideable>();
         unsigned int
@@ -266,11 +270,11 @@ private:
 
 
 // Fade out and then remove particles.
-class ParticleSystem : public RtEcs::IntervalSystem<Particle> {
+class ParticleSystem : public sEcs::IntervalSystem<Particle> {
 public:
-    ParticleSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
+    ParticleSystem(sEcs::uint32 intervals) : IntervalSystem(intervals) {}
 
-    void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
+    void update(sEcs::Entity entity, sEcs::DELTA_TYPE delta) override {
         auto* particle = entity.getComponent<Particle>();
         particle->alpha -= particle->d * delta;
         if (particle->alpha <= 0) {
@@ -283,16 +287,16 @@ public:
 
 
 // Renders all explosion particles efficiently as a quad vertex array.
-class ParticleRenderSystem : public RtEcs::IntervalSystem<Particle, Body> {
+class ParticleRenderSystem : public sEcs::IntervalSystem<Particle, Body> {
 public:
-    explicit ParticleRenderSystem(EcsCore::uint32 intervals, sf::RenderTarget &target)
+    explicit ParticleRenderSystem(sEcs::uint32 intervals, sf::RenderTarget &target)
             : IntervalSystem(intervals), target(target) {}
 
-    void start(RtEcs::DELTA_TYPE delta) override {
+    void start(sEcs::DELTA_TYPE delta) override {
         vertices = sf::VertexArray(sf::Quads);
     }
 
-    void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
+    void update(sEcs::Entity entity, sEcs::DELTA_TYPE delta) override {
         auto* particle = entity.getComponent<Particle>();
         auto* body = entity.getComponent<Body>();
         const float r = particle->radius;
@@ -305,7 +309,7 @@ public:
         vertices.append(sf::Vertex(body->position + transform.transformPoint(sf::Vector2f(-r, r)), particle->colour));
     }
 
-    void end(RtEcs::DELTA_TYPE delta) override {
+    void end(sEcs::DELTA_TYPE delta) override {
         target.draw(vertices);
     }
 
@@ -316,23 +320,23 @@ private:
 
 
 // For any two colliding bodies, destroys the bodies and emits a bunch of bodgy explosion particles.
-class ExplosionSystem : public RtEcs::System, public SimpleEH::Listener<CollisionEvent> {
+class ExplosionSystem : public sEcs::System, public sEcs::Listener<CollisionEvent> {
 
 public:
-    ExplosionSystem(RtEcs::RtManager* manager) {
+    ExplosionSystem(sEcs::RtManager* manager) {
         manager->subscribeEvent(this);
     }
 
-    void update(RtEcs::DELTA_TYPE delta) override {
+    void update(sEcs::DELTA_TYPE delta) override {
         for (uint64_t entityIdAsLong : collided) {
-            emit_particles(EcsCore::EntityId(entityIdAsLong));
-            getEntity(EcsCore::EntityId(entityIdAsLong)).erase();
+            emit_particles(sEcs::EntityId(entityIdAsLong));
+            getEntity(sEcs::EntityId(entityIdAsLong)).erase();
         }
         collided.clear();
     }
 
-    void emit_particles(EcsCore::EntityId entityId) {
-        RtEcs::Entity entity = getEntity(entityId);
+    void emit_particles(sEcs::EntityId entityId) {
+        sEcs::Entity entity = getEntity(entityId);
         auto* body = entity.getComponent<Body>();
         auto* renderable = entity.getComponent<Renderable>();
         auto* collideable = entity.getComponent<Collideable>();
@@ -341,7 +345,7 @@ public:
 
         float area = (M_PI * collideable->radius * collideable->radius) / 3.0;
         for (int i = 0; i < area; i++) {
-            RtEcs::Entity particle = createEntity();
+            sEcs::Entity particle = createEntity();
 
             float rotationd = r(720, 180);
             if (std::rand() % 2 == 0) rotationd = -rotationd;
@@ -374,9 +378,9 @@ private:
 
 
 // Render all Renderable entities and draw some informational text.
-class RenderSystem : public RtEcs::IntervalSystem<Body, Renderable> {
+class RenderSystem : public sEcs::IntervalSystem<Body, Renderable> {
 public:
-    explicit RenderSystem(EcsCore::uint32 intervals, sf::RenderTarget &target,
+    explicit RenderSystem(sEcs::uint32 intervals, sf::RenderTarget &target,
                           sf::Font &font) : IntervalSystem(intervals), target(target) {
         text.setFont(font);
         text.setPosition(sf::Vector2f(2, 2));
@@ -384,7 +388,7 @@ public:
         text.setColor(sf::Color::White);
     }
 
-    void update(RtEcs::Entity entity, RtEcs::DELTA_TYPE delta) override {
+    void update(sEcs::Entity entity, sEcs::DELTA_TYPE delta) override {
         auto* body = entity.getComponent<Body>();
         auto* renderable = entity.getComponent<Renderable>();
 
@@ -423,9 +427,9 @@ private:
 };
 
 
-class Application : public RtEcs::RtManager {
+class Application : public sEcs::RtManager {
 public:
-    explicit Application(EcsCore::uint32 maxEntities, EcsCore::uint32 maxComponents, sf::RenderTarget &target,
+    explicit Application(sEcs::uint32 maxEntities, sEcs::uint32 maxComponents, sf::RenderTarget &target,
                          sf::Font &font) : RtManager() {
         registerComponent<Body>("Body");
         registerComponent<Particle>("Particle");

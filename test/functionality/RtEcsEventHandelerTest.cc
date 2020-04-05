@@ -1,12 +1,12 @@
 #include <thread>
-#include <SimpleECS/RealTimeEcs.h>
+#include <SimpleECS/TypeWrapper.h>
 #include "gtest/gtest.h"
 
 using std::cout;
 using std::endl;
 using std::vector;
 
-using namespace RtEcs;
+using namespace sEcs;
 
 u_int32_t MAX_ENTITIES = 5000;
 u_int32_t MAX_COMPONENTS_MANAGER = 50;
@@ -22,10 +22,10 @@ struct SomeComponent {
 class SomeReceiver :
         public Listener <SomeEvent>,
         public Listener <SomeOtherEvent>,
-        public Listener <RtEcs::ComponentAddedEvent<SomeComponent>>,
-        public Listener <RtEcs::ComponentDeletedEvent<SomeComponent>>,
-        public Listener <RtEcs::EntityCreatedEvent>,
-        public Listener <RtEcs::EntityErasedEvent> {
+        public Listener <sEcs::ComponentAddedEvent<SomeComponent>>,
+        public Listener <sEcs::ComponentDeletedEvent<SomeComponent>>,
+        public Listener <sEcs::EntityCreatedEvent>,
+        public Listener <sEcs::EntityErasedEvent> {
 
 public:
     int someEventReceived = 0;
@@ -45,22 +45,22 @@ public:
         cout << "SomeOtherEvent received! Nr. " << someOtherEventReceived << endl;
     };
 
-    void  receive(const RtEcs::ComponentAddedEvent<SomeComponent>& event) override {
+    void  receive(const sEcs::ComponentAddedEvent<SomeComponent>& event) override {
         compAddedReceived++;
         cout << "SomeComponent added! Nr. " << compAddedReceived << endl;
     };
 
-    void  receive(const RtEcs::ComponentDeletedEvent<SomeComponent>& event) override {
+    void  receive(const sEcs::ComponentDeletedEvent<SomeComponent>& event) override {
         compDeletedReceived++;
         cout << "SomeComponent deleted! Nr. " << compDeletedReceived << endl;
     };
 
-    void  receive(const RtEcs::EntityCreatedEvent& event) override {
+    void  receive(const sEcs::EntityCreatedEvent& event) override {
         entityCreated++;
         cout << "Entity created! Nr. " << compAddedReceived << endl;
     };
 
-    void  receive(const RtEcs::EntityErasedEvent& event) override {
+    void  receive(const sEcs::EntityErasedEvent& event) override {
         entityErased++;
         cout << "Entity erased! Nr. " << compDeletedReceived << endl;
     };
@@ -71,7 +71,7 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
 
     cout << "Create RtManager" << endl;
 
-    RtManager manager;
+    EcsManager manager;
 
     cout << "register Events" << endl;
 
@@ -83,10 +83,10 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
 
     manager.registerComponent<SomeComponent>("comp");
 
-    manager.subscribeEvent<RtEcs::ComponentAddedEvent<SomeComponent>>(&receiver);
-    manager.subscribeEvent<RtEcs::ComponentDeletedEvent<SomeComponent>>(&receiver);
-    manager.subscribeEvent<RtEcs::EntityCreatedEvent>(&receiver);
-    manager.subscribeEvent<RtEcs::EntityErasedEvent>(&receiver);
+    manager.subscribeEvent<sEcs::ComponentAddedEvent<SomeComponent>>(&receiver);
+    manager.subscribeEvent<sEcs::ComponentDeletedEvent<SomeComponent>>(&receiver);
+    manager.subscribeEvent<sEcs::EntityCreatedEvent>(&receiver);
+    manager.subscribeEvent<sEcs::EntityErasedEvent>(&receiver);
 
     ASSERT_EQ(receiver.someEventReceived, 0);
 

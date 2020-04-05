@@ -1,5 +1,5 @@
 #include <iostream>
-#include <SimpleECS/RealTimeEcs.h>
+#include <SimpleECS/TypeWrapper.h>
 
 
 // The length of the map. It's a 1-dimensional, as a string represented map.
@@ -38,14 +38,14 @@ struct Move {
 ///////////////////////////////////////////////////////////////////
 
 // A system to render all visible and located entities.
-class RenderSystem : public RtEcs::IntervalSystem<Appearance, Position> {
+class RenderSystem : public sEcs::IntervalSystem<Appearance, Position> {
 
 public:
     // intervals: defines over how many Frames the entities will be updated. An argument of 2 would mean half of
     // the entities will be updated every first frame and the rest every second frame. So every 2 frames every
     // entity gets updated. The order of the entities is NON-DETERMINISTIC! (ehmmm... yes it is, but you can not
     // get control over it.)
-    RenderSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
+    RenderSystem(sEcs::uint32 intervals) : IntervalSystem(intervals) {}
 
     // This method will be called first, before any entity gets updated. We use it here to clean the map string.
     void start(float delta) override {
@@ -55,7 +55,7 @@ public:
 
     // Then this method is called for every entity with a Appearance and Position component.
     // We use it here to add every entities letter to the map.
-    void update(RtEcs::Entity entity, float delta) override {
+    void update(sEcs::Entity entity, float delta) override {
         charMap[(int)entity.getComponent<Position>()->x] = entity.getComponent<Appearance>()->character;
     }
 
@@ -72,14 +72,14 @@ private:
 
 
 // A system to move all movable entities.
-class MoveSystem : public RtEcs::IntervalSystem<Position, Move> {
+class MoveSystem : public sEcs::IntervalSystem<Position, Move> {
 
 public:
-    MoveSystem(EcsCore::uint32 intervals) : IntervalSystem(intervals) {}
+    MoveSystem(sEcs::uint32 intervals) : IntervalSystem(intervals) {}
 
     // We don't need the start and end method.
 
-    void update(RtEcs::Entity entity, float delta) override {
+    void update(sEcs::Entity entity, float delta) override {
         // At first we access the components of our entities.
         auto* pos = entity.getComponent<Position>();
         auto* move = entity.getComponent<Move>();
@@ -107,7 +107,7 @@ public:
 int main() {
 
     // Here we init the ecs with a capacity of maximal 1000 entities and 10 components.
-    RtEcs::RtManager ecs;
+    sEcs::RtManager ecs;
 
     // Here we register our components. We could include them in an extern library and register them with the same name,
     // to access them from the external library. Registering different components with the same name in two libraries
@@ -123,13 +123,13 @@ int main() {
 
     // We add a tree at any x^2 position.
     for (int i = 1; i < MAP_SIZE; i = i * 2) {
-        RtEcs::Entity tree = ecs.createEntity();
+        sEcs::Entity tree = ecs.createEntity();
         tree.addComponents(Position(i), Appearance('T'));
     }
 
     // And a walking letter every 10th position.
     for (int i = 1; i < MAP_SIZE; i += 10) {
-        RtEcs::Entity guy = ecs.createEntity();
+        sEcs::Entity guy = ecs.createEntity();
         guy.addComponents(Position(i), Appearance('A' + i / 10), Move((float)i / 40));
     }
 

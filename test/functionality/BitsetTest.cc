@@ -5,7 +5,7 @@ using std::cout;
 using std::endl;
 using std::vector;
 
-using namespace EcsCore;
+using namespace sEcs;
 using namespace EcsCoreIntern;
 
 const size_t MAX_COMPONENTS = 300;
