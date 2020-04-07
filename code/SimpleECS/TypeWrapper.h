@@ -19,24 +19,20 @@
 #include "ComponentHandler.h"
 #include "Register.h"
 #include "EcsManager.h"
+#include "Systems.h"
 
 namespace sEcs {
 
-    using sEcs::EntityId;
-    using sEcs::EntityIndex;
-    using sEcs::Key;
 
     using sEcs::INVALID;
     using sEcs::NOT_AVAILABLE;
 
-#if CORE_ECS_EVENTS==1
-    using sEcs::ComponentAddedEvent;
-    using sEcs::ComponentDeletedEvent;
-    using sEcs::EntityCreatedEvent;
-    using sEcs::EntityErasedEvent;
+#if USE_ECS_EVENTS==1
+    using sEcs::Events::ComponentAddedEvent;
+    using sEcs::Events::ComponentDeletedEvent;
+    using sEcs::Events::EntityCreatedEvent;
+    using sEcs::Events::EntityErasedEvent;
 #endif
-
-    using Listener = sEcs::Listener;
 
     enum Storing { POINTER, VALUE };
 
@@ -44,71 +40,74 @@ namespace sEcs {
     static sEcs::EcsManager* ECS_MANAGER_INSTANCE = nullptr;
 
 
-    static std::string cleanClassName(const char* name) {
-        char* strP = abi::__cxa_demangle(name,nullptr,nullptr,nullptr);
-        std::string string(strP);
-        free(strP);
-        return std::move(string);
-    }
+    namespace TypeWrapper_Intern {
 
-    template<typename T>
-    inline static std::string className() {
-        return cleanClassName(typeid(T).name());
-    }
+        static std::string cleanClassName(const char* name) {
+            char* strP = abi::__cxa_demangle(name,nullptr,nullptr,nullptr);
+            std::string string(strP);
+            free(strP);
+            return std::move(string);
+        }
+
+        template<typename T>
+        inline static std::string className() {
+            return cleanClassName(typeid(T).name());
+        }
 
 
-    template<typename ID_T, typename T>
-    sEcs::Id getSetId(sEcs::Id id = 0) {
-        static sEcs::Id _id = id;
+        template<ConceptTypes ID_T, typename T>
+        sEcs::Id getSetId(sEcs::Id id = 0) {
+            static sEcs::Id _id = id;
 
-        if (id != 0)
-            _id = id;
-
-        if (_id == 0) {
-            Key key = className<T>();
-            _id = ECS_MANAGER_INSTANCE->getIdByName<ID_T>(key);
+            if (id != 0)
+                _id = id;
 
             if (_id == 0) {
-                std::ostringstream oss;
-                oss << "Tried to access unregistered Type: " << key;
-                throw std::invalid_argument(oss.str());
+                Key key = className<T>();
+                _id = ECS_MANAGER_INSTANCE->getIdByName<ID_T>(key);
+
+                if (_id == 0) {
+                    std::ostringstream oss;
+                    oss << "Tried to access unregistered Type: " << key;
+                    throw std::invalid_argument(oss.str());
+                }
             }
+
+            return _id;
         }
 
-        return _id;
-    }
 
+        template<typename T>
+        sEcs::Id getGenerateEventId() {
+            static sEcs::Id _id = ECS_MANAGER_INSTANCE->getIdByName<EVENT>(className<T>());
 
-    template<typename T>
-    sEcs::Id getGenerateEventId() {
-        static sEcs::Id _id = ECS_MANAGER_INSTANCE->getIdByName<EVENT>(className<T>());
+            if (_id == 0) {
+                Key key = className<T>();
+                _id = ECS_MANAGER_INSTANCE->generateEvent(key);
+            }
 
-        if (_id == 0) {
-            Key key = className<T>();
-            _id = ECS_MANAGER_INSTANCE->generateEvent(key);
+            return _id;
         }
 
-        return _id;
+
+        template<typename V>
+        inline void recursiveCollectComponentIds(sEcs::ComponentId* list, uint32_t pos) {}
+
+        template<typename V, typename T, typename... Ts>
+        inline void recursiveCollectComponentIds(sEcs::ComponentId* list, uint32_t pos) {
+            list[pos] = getSetId<COMPONENT, T>();
+            recursiveCollectComponentIds<void, Ts...>(list, ++pos);
+        }
+
+        template<typename... Ts>
+        void collectComponentIds(sEcs::ComponentId* list) {
+            return recursiveCollectComponentIds<void, Ts...>(list, 0);
+        }
+
     }
 
 
-    template<typename T>
-    inline void recursiveCollectComponentIds(sEcs::ComponentId* list, uint32_t pos) {
-        list[pos] = getSetId<COMPONENT, T>();
-    }
-
-    template<typename T, typename... Ts>
-    inline void recursiveCollectComponentIds(sEcs::ComponentId* list, uint32_t pos) {
-        list[pos] = getSetId<COMPONENT, T>();
-        recursiveCollectComponentIds<Ts...>(list, ++pos);
-    }
-
-    template<typename... Ts>
-    void collectComponentIds(sEcs::ComponentId* list) {
-        return recursiveCollectComponentIds<Ts...>(list, 0);
-    }
-
-    class Entity : EntityId {
+    class Entity {
 
     public:
 
@@ -120,17 +119,17 @@ namespace sEcs {
 
         template<typename T>
         T* addComponent(T&& component) {
-            void* location = ECS_MANAGER_INSTANCE->addComponent(entityId, getSetId<COMPONENT, T>());
-            new(location) T(std::forward(component));
+            void* location = ECS_MANAGER_INSTANCE->addComponent(entityId, TypeWrapper_Intern::getSetId<COMPONENT, T>());
+            new(location) T(std::forward<T>(component));
             return (T*) location;
         }
 
         template<typename ... Ts>
         bool addComponents(Ts&&... components) {
             auto ids = std::vector<sEcs::ComponentId>(sizeof...(Ts));
-            collectComponentIds(&ids[0]);
+            TypeWrapper_Intern::collectComponentIds<Ts...>(&ids[0]);
             ECS_MANAGER_INSTANCE->activateComponents(entityId, &ids.front(), sizeof...(Ts));
-            placeComponents(components...);
+            placeComponents(std::forward<Ts>(components)...);
             return true;
         }
 
@@ -148,12 +147,13 @@ namespace sEcs {
 
         template<typename T>
         inline bool deleteComponent() {
-            return ECS_MANAGER_INSTANCE->deleteComponent(entityId, getSetId<COMPONENT, T>());
+            return ECS_MANAGER_INSTANCE->deleteComponent(entityId, TypeWrapper_Intern::getSetId<COMPONENT, T>());
         }
 
         template<typename T>
         inline T* getComponent() {
-            return ECS_MANAGER_INSTANCE->getComponent(entityId, getSetId<COMPONENT, T>());
+            return reinterpret_cast<T *>(
+                    ECS_MANAGER_INSTANCE->getComponent(entityId, TypeWrapper_Intern::getSetId<COMPONENT, T>()));
         }
 
         inline sEcs::EntityId id() {
@@ -170,13 +170,15 @@ namespace sEcs {
 
         template<typename T, typename... Ts>
         inline void recursivePlaceComponents(T&& component, Ts&&... components) {
-            new(ECS_MANAGER_INSTANCE->getComponent(entityId, getSetId<COMPONENT, T>())) T(std::forward(component));
+            void* location = ECS_MANAGER_INSTANCE->getComponent(entityId, TypeWrapper_Intern::getSetId<COMPONENT, T>());
+            new(location) T(std::forward<T>(component));
             recursivePlaceComponents<Ts...>(std::forward<Ts>(components)...);
         }
 
         template<typename T>
         inline void recursivePlaceComponents(T&& component) {
-            new(ECS_MANAGER_INSTANCE->getComponent(entityId, getSetId<COMPONENT, T>())) T(std::forward(component));
+            void* location = ECS_MANAGER_INSTANCE->getComponent(entityId, TypeWrapper_Intern::getSetId<COMPONENT, T>());
+            new(location) T(std::forward<T>(component));
         }
 
     };
@@ -203,7 +205,7 @@ namespace sEcs {
     template<typename ... Ts>
     sEcs::uint32 countEntities() {
         auto ids = std::vector<sEcs::ComponentId>(sizeof...(Ts));
-        collectComponentIds<Ts...>(&ids[0]);
+        TypeWrapper_Intern::collectComponentIds<Ts...>(&ids[0]);
         return ECS_MANAGER_INSTANCE->getEntityAmount(ids);
     }
 
@@ -212,54 +214,38 @@ namespace sEcs {
     }
 
 
-    template<typename T>
-    void emitEvent(const T& event) {
-        ECS_MANAGER_INSTANCE->emitEvent(event);
-    }
-
-    template<typename T>
-    void subscribeEvent(sEcs::Listener* listener) {
-        ECS_MANAGER_INSTANCE->subscribeEvent(getGenerateEventId<T>(), listener);
-    }
-
-    template<typename T>
-    void unsubscribeEvent(sEcs::Listener* listener) {
-        ECS_MANAGER_INSTANCE->unsubscribeEvent(getGenerateEventId<T>(), listener);
-    }
-
-
     // Makes a variable available via access<TYPE>()
     template<typename T>
     T* addSingleton(T* singleton) {
-        Key key = className<T>();
+        Key key = TypeWrapper_Intern::className<T>();
         ObjectId id = ECS_MANAGER_INSTANCE->addObject(key, singleton);
-        getSetId<OBJECT, T>(id);
+        TypeWrapper_Intern::getSetId<OBJECT, T>(id);
         return singleton;
     }
 
     template<typename T>
     T* accessSingleton() {
-        return ECS_MANAGER_INSTANCE->getObject(getSetId<OBJECT, T>());
+        return ECS_MANAGER_INSTANCE->getObject(TypeWrapper_Intern::getSetId<OBJECT, T>());
     }
 
 
     template <typename T, typename = std::enable_if_t<std::is_base_of<System, T>::value>>
-    T* addSystem(T* system) {
-        Key key = className<T>();
-        ObjectId id = ECS_MANAGER_INSTANCE->addSystem(key, system);
-        getSetId<SYSTEM, T>(id);
+    std::shared_ptr<T> addSystem(std::shared_ptr<T> system) {
+        Key key = TypeWrapper_Intern::className<T>();
+        SystemId id = ECS_MANAGER_INSTANCE->addSystem(key, system);
+        TypeWrapper_Intern::getSetId<SYSTEM, T>(id);
         return system;
     }
 
     template<typename T>
     T* accessSystem() {
-        return ECS_MANAGER_INSTANCE->getObject(getSetId<SYSTEM, T>());
+        return ECS_MANAGER_INSTANCE->getObject(TypeWrapper_Intern::getSetId<SYSTEM, T>());
     }
 
 
     template<typename T>
     void registerComponent(Storing storing = Storing::VALUE) {
-        Key key = className<T>();
+        Key key = TypeWrapper_Intern::className<T>();
         sEcs::ComponentId id = 0;
         switch (storing) {
             case POINTER:
@@ -271,8 +257,93 @@ namespace sEcs {
                     [](void *p) { reinterpret_cast<T *>(p)->~T(); }));
                 break;
         }
-        getSetId<T>(id);
+        TypeWrapper_Intern::getSetId<COMPONENT, T>(id);
     }
+
+
+    template<typename T>
+    class Listener : public Events::Listener {
+    public:
+        virtual void receive(const T& event) = 0;
+
+        void receive(Events::EventId eventId, const void* event) override {
+            receive(*(reinterpret_cast <const T *>(event)));
+        }
+
+    };
+
+    template<typename T>
+    void emitEvent(const T& event) {
+        ECS_MANAGER_INSTANCE->emitEvent(TypeWrapper_Intern::getGenerateEventId<T>(), &event);
+    }
+
+    template<typename T>
+    void subscribeEvent(Listener<T>* listener) {
+        ECS_MANAGER_INSTANCE->subscribeEvent(TypeWrapper_Intern::getGenerateEventId<T>(), listener);
+    }
+
+    template<typename T>
+    void unsubscribeEvent(Listener<T>* listener) {
+        ECS_MANAGER_INSTANCE->unsubscribeEvent(TypeWrapper_Intern::getGenerateEventId<T>(), listener);
+    }
+
+
+    template<typename ... Ts>
+    class IteratingSystem : public Systems::IteratingSystem {
+
+    public:
+        IteratingSystem() : Systems::IteratingSystem(ECS_MANAGER_INSTANCE) {
+            componentIds = std::vector<sEcs::ComponentId>(sizeof...(Ts));
+            TypeWrapper_Intern::collectComponentIds<Ts...>(&componentIds[0]);
+            setIteratorId = _core->createSetIterator(componentIds);
+        }
+
+        virtual void update(Entity entity, DELTA_TYPE delta) = 0;
+
+        void update(EntityId entityId, DELTA_TYPE delta) override {
+            update(Entity(entityId), delta);
+        }
+
+    };
+
+
+    template<typename ... Ts>
+    class IterateAllSystem : public Systems::IterateAllSystem {
+
+    public:
+        IterateAllSystem() : Systems::IterateAllSystem(ECS_MANAGER_INSTANCE) {
+            componentIds = std::vector<sEcs::ComponentId>(sizeof...(Ts));
+            TypeWrapper_Intern::collectComponentIds<Ts...>(&componentIds[0]);
+            setIteratorId = _core->createSetIterator(componentIds);
+        }
+
+        virtual void update(Entity entity, DELTA_TYPE delta) = 0;
+
+        void update(EntityId entityId, DELTA_TYPE delta) override {
+            update(Entity(entityId), delta);
+        }
+
+    };
+
+
+    template<typename ... Ts>
+    class IntervalSystem : public Systems::IntervalSystem {
+
+    public:
+        explicit IntervalSystem(sEcs::uint32 intervals = 1)
+                : Systems::IntervalSystem(ECS_MANAGER_INSTANCE, intervals) {
+            componentIds = std::vector<sEcs::ComponentId>(sizeof...(Ts));
+            TypeWrapper_Intern::collectComponentIds<Ts...>(&componentIds[0]);
+            setIteratorId = _core->createSetIterator(componentIds);
+        }
+
+        virtual void update(Entity entity, DELTA_TYPE delta) = 0;
+
+        void update(EntityId entityId, DELTA_TYPE delta) override {
+            update(Entity(entityId), delta);
+        }
+
+    };
 
 }
 

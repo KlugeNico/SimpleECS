@@ -6,6 +6,9 @@ This project is orientated to the [EntityX Project](https://github.com/alecthoma
 
 I made my own ECS, to get a better understanding for ECS and to get full control to implement features I need.
 
+I'm sorry, but it's not recommended to use it yet, because versioning did't started and there will be major changes in syntax maybe.
+If you are really interested in using it contact me, so I will release it and adept my way of working on it. 
+
 ## Differences to EntityX
 
 As far as I understood the code of EntityX, it is designed in a way I, which makes it very difficult (or impossible) to add components and systems from an external library. Because I want my games to be easy modifiable I need this feature. Also I think it's necessary to split the execution of expensive systems over multiple frames, because they can not be processed in one frame.
@@ -15,6 +18,7 @@ As far as I understood the code of EntityX, it is designed in a way I, which mak
 - Core API very near to functionality (But there is also a handy wrapper)
 - Registered Components to make usage of Libraries (.dll .so) for mods possible.
 - Systems can be updated over multiple Frames.
+- The core is completely type independent. So it's possible to write extensions which add Components/Systems on runtime via. LUA ect.
 - Seems to be faster for now. At least for the EntityX example (the exploding circles). I build both with gcc version 6.3.0 on Debian.
   - EntityX: 40 fps
   - SimpleECS: 50 fps.
@@ -22,6 +26,7 @@ As far as I understood the code of EntityX, it is designed in a way I, which mak
 ## Planed Features:
 
 - more CPU cache friendliness (performance boost). Maybe I have to change the component storage and entity iteration fundamentally.
+- Virtual SetIterators to implement more specific solutions (better CPU and memory performance)
 
 ## Implementation details
 

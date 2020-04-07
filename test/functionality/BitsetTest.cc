@@ -6,7 +6,7 @@ using std::endl;
 using std::vector;
 
 using namespace sEcs;
-using namespace EcsCoreIntern;
+using namespace Core_Intern;
 
 const size_t MAX_COMPONENTS = 300;
 

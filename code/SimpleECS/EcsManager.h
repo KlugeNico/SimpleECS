@@ -54,12 +54,12 @@ namespace sEcs {
         }
 
 
-        EventId generateEvent(const std::string& eventName) {
+        Events::EventId generateEvent(const std::string& eventName) {
             if (getIdByName<ConceptTypes::EVENT>(eventName) != 0)
                 throw std::invalid_argument ("Event already existing: " + eventName);
 
-            EventId eventId = generateEvent();
-            conceptRegisters[ConceptTypes::COMPONENT].set(eventName, eventId);
+            Events::EventId eventId = generateEvent();
+            conceptRegisters[ConceptTypes::EVENT].set(eventName, eventId);
 
             return eventId;
         }
@@ -76,12 +76,12 @@ namespace sEcs {
         }
 
 
-        SystemId addSystem(const std::string& systemName, const std::shared_ptr<System>& system) {
+        SystemId addSystem(const std::string& systemName, std::shared_ptr<System> system) {
             if (getIdByName<ConceptTypes::SYSTEM>(systemName) != 0)
                 throw std::invalid_argument ("System already existing: " + systemName);
 
             systems.emplace_back(system);
-            conceptRegisters[ConceptTypes::COMPONENT].set(systemName, systems.size() - 1);
+            conceptRegisters[ConceptTypes::SYSTEM].set(systemName, systems.size() - 1);
             return systems.size() - 1;
         }
 
@@ -90,7 +90,7 @@ namespace sEcs {
         }
 
 
-        SystemId addObject(const std::string& objectName, const std::shared_ptr<void>& object) {
+        SystemId addObject(const std::string& objectName, std::shared_ptr<void> object) {
             if (getIdByName<ConceptTypes::OBJECT>(objectName) != 0)
                 throw std::invalid_argument ("Object already existing: " + objectName);
 
@@ -105,8 +105,8 @@ namespace sEcs {
 
 
         void update(DELTA_TYPE delta) {
-            for (const auto& system : systems) {
-                system->update(delta);
+            for (uint32 i = 1; i < systems.size(); i++) {
+                systems[i]->update(delta);
             }
         }
 

@@ -42,6 +42,7 @@
  */
 
 #include <cmath>
+#include <memory>
 #include <unordered_set>
 #include <cstdlib>
 #include <memory>
@@ -158,6 +159,7 @@ struct BodySystem : public sEcs::IntervalSystem<Body> {
 
     };
 };
+
 
 
 // Bounce bodies off the edge of the screen.
@@ -323,8 +325,8 @@ private:
 class ExplosionSystem : public sEcs::System, public sEcs::Listener<CollisionEvent> {
 
 public:
-    ExplosionSystem(sEcs::RtManager* manager) {
-        manager->subscribeEvent(this);
+    ExplosionSystem() {
+        subscribeEvent(this);
     }
 
     void update(sEcs::DELTA_TYPE delta) override {
@@ -427,23 +429,16 @@ private:
 };
 
 
-class Application : public sEcs::RtManager {
+class Application : public sEcs::EcsManager {
 public:
     explicit Application(sEcs::uint32 maxEntities, sEcs::uint32 maxComponents, sf::RenderTarget &target,
-                         sf::Font &font) : RtManager() {
-        registerComponent<Body>("Body");
-        registerComponent<Particle>("Particle");
-        registerComponent<Collideable>("Collideable");
-        registerComponent<Renderable>("Renderable");
+                         sf::Font &font) {
+        ECS_MANAGER_INSTANCE = this;
 
-        addSystem(new SpawnSystem(target, 500));
-        addSystem(new BodySystem(1));
-        addSystem(new BounceSystem(1, target));
-        addSystem(new CollisionSystem(1, target));
-        addSystem(new ExplosionSystem(this));
-        addSystem(new ParticleSystem(1));
-        addSystem(new RenderSystem(1, target, font));
-        addSystem(new ParticleRenderSystem(1, target));
+        ::registerComponent<Body>();
+        ::registerComponent<Particle>();
+        ::registerComponent<Collideable>();
+        ::registerComponent<Renderable>();
 
     }
 
@@ -461,6 +456,15 @@ int main() {
     }
 
     Application app(200000, 20, window, font);
+
+    ::addSystem(std::make_shared<SpawnSystem>(window, 500));
+    ::addSystem(std::make_shared<BodySystem>(1));
+    ::addSystem(std::make_shared<BounceSystem>(1, window));
+    ::addSystem(std::make_shared<CollisionSystem>(1, window));
+    ::addSystem(std::make_shared<ExplosionSystem>());
+    ::addSystem(std::make_shared<ParticleSystem>(1));
+    ::addSystem(std::make_shared<RenderSystem>(1, window, font));
+    ::addSystem(std::make_shared<ParticleRenderSystem>(1, window));
 
     sf::Clock clock;
     while (window.isOpen()) {

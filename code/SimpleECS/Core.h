@@ -26,8 +26,8 @@
 #define BITSET_TYPE std::uint8_t
 #define BITSET_TYPE_SIZE 8u
 
-#ifndef CORE_ECS_EVENTS
-#define CORE_ECS_EVENTS 1
+#ifndef USE_ECS_EVENTS
+#define USE_ECS_EVENTS 1
 #endif
 
 #ifndef MAX_COMPONENT_AMOUNT
@@ -47,29 +47,40 @@ namespace sEcs {
     static const EntityId ENTITY_NULL;
     static const std::nullptr_t NOT_AVAILABLE = nullptr;
 
-#if CORE_ECS_EVENTS==1
-    struct ComponentAddedEvent {
-        explicit ComponentAddedEvent (const EntityId& entityId) : entityId(entityId) {}
-        EntityId entityId;
-    };
 
-    struct ComponentDeletedEvent {
-        explicit ComponentDeletedEvent (const EntityId& entityId) : entityId(entityId) {}
-        EntityId entityId;
-    };
+#if USE_ECS_EVENTS==1
 
-    struct EntityCreatedEvent {
-        explicit EntityCreatedEvent (const EntityId& entityId) : entityId(entityId) {}
-        EntityId entityId;
-    };
+    namespace Events {
 
-    struct EntityErasedEvent {
-        explicit EntityErasedEvent (const EntityId& entityId) : entityId(entityId) {}
-        EntityId entityId;
-    };
+        struct ComponentAddedEvent {
+            explicit ComponentAddedEvent(const EntityId& entityId) : entityId(entityId) {}
+
+            EntityId entityId;
+        };
+
+        struct ComponentDeletedEvent {
+            explicit ComponentDeletedEvent(const EntityId& entityId) : entityId(entityId) {}
+
+            EntityId entityId;
+        };
+
+        struct EntityCreatedEvent {
+            explicit EntityCreatedEvent(const EntityId& entityId) : entityId(entityId) {}
+
+            EntityId entityId;
+        };
+
+        struct EntityErasedEvent {
+            explicit EntityErasedEvent(const EntityId& entityId) : entityId(entityId) {}
+
+            EntityId entityId;
+        };
+
+    }
+
 #endif
 
-    namespace EcsCoreIntern {     // private
+    namespace Core_Intern {     // private
 
         template<size_t size>
         struct BitSet {
@@ -248,7 +259,7 @@ namespace sEcs {
     }      // end private
 
 
-#if CORE_ECS_EVENTS == 1
+#if USE_ECS_EVENTS == 1
     struct ComponentEventInfo {
         sEcs::uint32 addEventId = 0;
         sEcs::uint32 deleteEventId = 0;
@@ -271,7 +282,7 @@ namespace sEcs {
         // only defined behavior for valid requests (entity exists and component not)
         virtual void* createComponent(sEcs::EntityIndex entityIndex) = 0;
 
-#if CORE_ECS_EVENTS == 1
+#if USE_ECS_EVENTS == 1
 
         ComponentEventInfo& getComponentEventInfo() {
             return componentInfo;
@@ -288,26 +299,28 @@ namespace sEcs {
     };
 
 
-    class Core : public sEcs::EventHandler {
+    class Core : public sEcs::Events::EventHandler {
 
     public:
 
         Core(const Core&) = delete;
 
         explicit Core() :
-                entities(std::vector<EcsCoreIntern::EntityState>(MAX_ENTITY_AMOUNT + 1)) {
+                entities(std::vector<Core_Intern::EntityState>(MAX_ENTITY_AMOUNT + 1)) {
             componentHandles.reserve(MAX_COMPONENT_AMOUNT + 1);
             componentHandles.push_back(nullptr);
-            entities[0] = EcsCoreIntern::EntityState();
+            entities[0] = Core_Intern::EntityState();
+#if USE_ECS_EVENTS==1
             entityCreatedEventId = generateEvent();
             entityErasedEventId = generateEvent();
+#endif
         }
 
 
         ~Core() {
             for (ComponentHandle *ch : componentHandles) delete ch;
-            for (EcsCoreIntern::EntitySet *set : entitySets) delete set;
-            for (EcsCoreIntern::SetIterator *setIterator : setIterators) delete setIterator;
+            for (Core_Intern::EntitySet *set : entitySets) delete set;
+            for (Core_Intern::SetIterator *setIterator : setIterators) delete setIterator;
         }
 
 
@@ -320,13 +333,13 @@ namespace sEcs {
                 freeEntityIndices.pop_back();
             } else {
                 index = ++lastEntityIndex;
-                entities[index] = EcsCoreIntern::EntityState(EntityVersion(1));
+                entities[index] = Core_Intern::EntityState(EntityVersion(1));
             }
 
             EntityId entityId = entities[index].id(index);
 
-#if CORE_ECS_EVENTS==1
-            auto event = EntityCreatedEvent(entityId);
+#if USE_ECS_EVENTS==1
+            auto event = Events::EntityCreatedEvent(entityId);
             emitEvent(entityCreatedEventId, &event);
 #endif
 
@@ -344,19 +357,19 @@ namespace sEcs {
             if (index == INVALID)
                 return false;
 
-#if CORE_ECS_EVENTS==1
-            auto eventErased = EntityErasedEvent(entityId);
+#if USE_ECS_EVENTS==1
+            auto eventErased = Events::EntityErasedEvent(entityId);
             emitEvent(entityErasedEventId, &eventErased);
 #endif
 
-            EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
+            Core_Intern::ComponentBitset originally = *entities[index].getComponentMask();
 
             for (ComponentId i = 1; i < componentHandles.size(); i++) {
                 ComponentHandle *ch = componentHandles[i];
                 if (originally.isSet(i)) {   // Only delete existing components
                     ch->destroyComponent(entityId, index);
-#if CORE_ECS_EVENTS == 1
-                    auto event = ComponentDeletedEvent(entityId);
+#if USE_ECS_EVENTS == 1
+                    auto event = Events::ComponentDeletedEvent(entityId);
                     emitEvent(ch->getComponentEventInfo().deleteEventId, &event);
 #endif
                 }
@@ -377,7 +390,7 @@ namespace sEcs {
                 throw std::length_error("To many component types registered! Define by MAX_COMPONENT_AMOUNT.");
             }
 
-#if CORE_ECS_EVENTS==1
+#if USE_ECS_EVENTS==1
             ComponentEventInfo& componentInfo = ch->getComponentEventInfo();
             componentInfo.addEventId = generateEvent();
             componentInfo.deleteEventId = generateEvent();
@@ -394,23 +407,23 @@ namespace sEcs {
                 return nullptr;
 
             ComponentHandle* ch = componentHandles[componentId];
-            EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
+            Core_Intern::ComponentBitset originally = *entities[index].getComponentMask();
 
             if (!originally.isSet( componentId )) {   // Only update if component type is new for entity
                 entities[index].getComponentMask()->set( componentId );
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
             } else {
                 ch->destroyComponent(entityId, index);
-#if CORE_ECS_EVENTS == 1
-                auto event = ComponentDeletedEvent(entityId);
+#if USE_ECS_EVENTS == 1
+                auto event = Events::ComponentDeletedEvent(entityId);
                 emitEvent(ch->getComponentEventInfo().deleteEventId, &event);
 #endif
             }
 
             void* comp = ch->createComponent(index);
 
-#if CORE_ECS_EVENTS==1
-            auto event = ComponentAddedEvent(entityId);
+#if USE_ECS_EVENTS==1
+            auto event = Events::ComponentAddedEvent(entityId);
             emitEvent(ch->getComponentEventInfo().addEventId, &event);
 #endif
 
@@ -425,15 +438,15 @@ namespace sEcs {
             if (index == INVALID)
                 return false;
 
-            EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
+            Core_Intern::ComponentBitset originally = *entities[index].getComponentMask();
 
             bool modified = false;
             for (uint32 i = 0; i < idsAmount; i++) {
                 ComponentHandle* ch = componentHandles[ids[i]];
                 if (originally.isSet(ids[i])) {
                     ch->destroyComponent(entityId, index);
-#if CORE_ECS_EVENTS == 1
-                    auto event = ComponentDeletedEvent(entityId);
+#if USE_ECS_EVENTS == 1
+                    auto event = Events::ComponentDeletedEvent(entityId);
                     emitEvent(ch->getComponentEventInfo().deleteEventId, &event);
 #endif
                 }
@@ -449,10 +462,10 @@ namespace sEcs {
                 updateAllMemberships(entityId, &originally, entities[index].getComponentMask());
             }
 
-#if CORE_ECS_EVENTS==1
+#if USE_ECS_EVENTS==1
             for (uint32 i = 0; i < idsAmount; i++) {
                 ComponentHandle* ch = componentHandles[ids[i]];
-                auto event = ComponentAddedEvent(entityId);
+                auto event = Events::ComponentAddedEvent(entityId);
                 emitEvent(ch->getComponentEventInfo().addEventId, &event);
             }
 #endif
@@ -479,13 +492,13 @@ namespace sEcs {
             if (index == INVALID)
                 return false;
 
-            EcsCoreIntern::ComponentBitset originally = *entities[index].getComponentMask();
+            Core_Intern::ComponentBitset originally = *entities[index].getComponentMask();
 
             if (originally.isSet(componentId)) {
                 auto* ch = componentHandles[componentId];
                 ch->destroyComponent(entityId, index);
-#if CORE_ECS_EVENTS == 1
-                auto event = ComponentDeletedEvent(entityId);
+#if USE_ECS_EVENTS == 1
+                auto event = Events::ComponentDeletedEvent(entityId);
                 emitEvent(ch->getComponentEventInfo().deleteEventId, &event);
 #endif
                 entities[index].getComponentMask()->unset( componentId );
@@ -500,14 +513,14 @@ namespace sEcs {
         SetIteratorId createSetIterator(std::vector<ComponentId> componentIds) {
 
             std::sort(componentIds.begin(), componentIds.end());
-            EcsCoreIntern::EntitySet *entitySet = nullptr;
+            Core_Intern::EntitySet *entitySet = nullptr;
 
-            for (EcsCoreIntern::EntitySet *set : entitySets)
+            for (Core_Intern::EntitySet *set : entitySets)
                 if (set->concern(&componentIds))
                     entitySet = set;
 
             if (entitySet == nullptr) {
-                entitySet = new EcsCoreIntern::EntitySet(componentIds);
+                entitySet = new Core_Intern::EntitySet(componentIds);
                 entitySets.push_back(entitySet);
 
                 // add all related Entities
@@ -515,7 +528,7 @@ namespace sEcs {
                     entitySet->dumbAddIfMember(entities[entityIndex].id(entityIndex), entities[entityIndex].getComponentMask());
             }
 
-            setIterators.push_back(new EcsCoreIntern::SetIterator(entitySet));
+            setIterators.push_back(new Core_Intern::SetIterator(entitySet));
             return static_cast<SetIteratorId>(setIterators.size() - 1);
         }
 
@@ -562,21 +575,21 @@ namespace sEcs {
     private:
         EntityIndex lastEntityIndex = 0;
 
-#if CORE_ECS_EVENTS == 1
+#if USE_ECS_EVENTS == 1
         uint32 entityCreatedEventId = generateEvent();
         uint32 entityErasedEventId = generateEvent();
 #endif
 
-        std::vector<EcsCoreIntern::EntityState> entities;
+        std::vector<Core_Intern::EntityState> entities;
         std::vector<EntityIndex> freeEntityIndices;
 
         std::vector<ComponentHandle *> componentHandles;
 
-        std::vector<EcsCoreIntern::EntitySet *> entitySets;
-        std::vector<EcsCoreIntern::SetIterator *> setIterators;
+        std::vector<Core_Intern::EntitySet *> entitySets;
+        std::vector<Core_Intern::SetIterator *> setIterators;
 
-        void updateAllMemberships(EntityId entityId, EcsCoreIntern::ComponentBitset *previous, EcsCoreIntern::ComponentBitset *recent) {
-            for (EcsCoreIntern::EntitySet *set : entitySets) {
+        void updateAllMemberships(EntityId entityId, Core_Intern::ComponentBitset *previous, Core_Intern::ComponentBitset *recent) {
+            for (Core_Intern::EntitySet *set : entitySets) {
                 set->updateMembership(entityId.index, previous, recent);
             }
         }

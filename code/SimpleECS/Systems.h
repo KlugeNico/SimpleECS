@@ -6,121 +6,130 @@
 #define SIMPLEECS_SYSTEMS_H
 
 
+#include <utility>
+
 #include "EcsManager.h"
 
 
 namespace sEcs {
 
+    namespace Systems {
 
-    template<typename ... Ts>
-    class IteratingSystem : public System {
+        class IteratingSystem : public System {
 
-        IteratingSystem(EcsManager* ecsManager) : manager(ecsManager) {}
+        public:
+            explicit IteratingSystem(Core* core) : _core(core) {}
 
-    protected:
-        sEcs::SetIteratorId SetIteratorId = 0;
-
-        void init(sEcs::Core* pManager, RtManager* pRtManager) override {
-            Handler::init(pManager, pRtManager);
-            SetIteratorId = pManager->createSetIterator();
-        }
-
-    private:
-        EcsManager* manager;
-
-    };
-
-
-    template<typename ... Ts>
-    class IterateAllSystem : public IteratingSystem<Ts...> {
-
-    public:
-
-        virtual void start(DELTA_TYPE delta) {};
-
-        virtual void update(Entity entity, DELTA_TYPE delta) = 0;
-
-        virtual void end(DELTA_TYPE delta) {};
-
-        void update(DELTA_TYPE delta) override {
-            start(delta);
-            sEcs::EntityId entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
-            while (entityId.index != sEcs::INVALID) {
-                update(Entity(Handler::manager(), entityId), delta);
-                entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
+            explicit IteratingSystem(Core* core, std::vector<ComponentId> componentIds)
+                    : _core(core), componentIds(std::move(componentIds)) {
+                setIteratorId = _core->createSetIterator(componentIds);
             }
-            end(delta);
-        }
 
-    };
+        protected:
+            sEcs::SetIteratorId setIteratorId = 0;
+            Core* _core = nullptr;
+            std::vector<ComponentId> componentIds;
+
+        };
 
 
-    template<typename ... Ts>
-    class IntervalSystem : public IteratingSystem<Ts...> {
+        class IterateAllSystem : public IteratingSystem {
 
-    public:
-        virtual void start(DELTA_TYPE delta) {};
+        public:
+            explicit IterateAllSystem(Core* core) : IteratingSystem(core) {}
 
-        virtual void update(Entity entity, DELTA_TYPE delta) = 0;
+            explicit IterateAllSystem(Core* core, std::vector<ComponentId> componentIds)
+                    : IteratingSystem(core, std::move(componentIds)) {}
 
-        virtual void end(DELTA_TYPE delta) {};
+            virtual void start(DELTA_TYPE delta) {};
+            virtual void update(EntityId entityId, DELTA_TYPE delta) = 0;
+            virtual void end(DELTA_TYPE delta) {};
 
-        explicit IntervalSystem(sEcs::uint32 intervals = 1)
-                : intervals(intervals), overallDelta(0), leftIntervals(intervals) {
-            if (intervals < 1)
-                throw std::invalid_argument("Minimum 1 Interval!");
-        }
-
-        void update(DELTA_TYPE delta) override {
-
-            if (leftIntervals == intervals)
+            void update(DELTA_TYPE delta) override {
                 start(delta);
-
-            sEcs::EntityId entityId;
-            if (leftIntervals == 1) {
-                entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
-
+                sEcs::EntityId entityId = _core->nextEntity(setIteratorId);
                 while (entityId.index != sEcs::INVALID) {
-                    update(Entity(Handler::manager(), entityId), overallDelta);
-                    entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
+                    update(entityId, delta);
+                    entityId = _core->nextEntity(setIteratorId);
                 }
-            } else {
-                sEcs::uint32 amount =
-                        (Handler::manager()->getEntityAmount(IteratingSystem<Ts...>::SetIteratorId) - treated) /
-                        leftIntervals;
-
-                for (sEcs::uint32 i = 0; i < amount; i++) {
-                    entityId = Handler::manager()->nextEntity(IteratingSystem<Ts...>::SetIteratorId);
-                    if (entityId.index == sEcs::INVALID)
-                        break;
-                    update(Entity(Handler::manager(), entityId), overallDelta);
-                }
-
-                treated += amount;
+                end(delta);
             }
 
-            deltaSum += delta;
+        };
 
-            if (leftIntervals <= 1) {
-                treated = 0;
-                leftIntervals = intervals;
-                overallDelta = deltaSum;
-                deltaSum = 0;
-                end(delta);
-            } else
-                leftIntervals--;
 
-        }
+        class IntervalSystem : public IteratingSystem {
 
-    private:
-        sEcs::uint32 intervals;
-        sEcs::uint32 leftIntervals;
-        sEcs::uint32 treated = 0;
-        DELTA_TYPE deltaSum = 0;
-        double overallDelta;
+        public:
+            virtual void start(DELTA_TYPE delta) {};
+            virtual void update(EntityId entityId, DELTA_TYPE delta) = 0;
+            virtual void end(DELTA_TYPE delta) {};
 
-    };
+            explicit IntervalSystem(Core* core, sEcs::uint32 intervals = 1)
+                    : IteratingSystem(core),
+                      intervals(intervals), overallDelta(0), leftIntervals(intervals) {
+                if (intervals < 1)
+                    throw std::invalid_argument("Minimum 1 Interval!");
+            }
 
+            explicit IntervalSystem(Core* core, std::vector<ComponentId> componentIds, sEcs::uint32 intervals = 1)
+                    : IteratingSystem(core, std::move(componentIds)),
+                      intervals(intervals), overallDelta(0), leftIntervals(intervals) {
+                if (intervals < 1)
+                    throw std::invalid_argument("Minimum 1 Interval!");
+            }
+
+            void update(DELTA_TYPE delta) override {
+
+                if (leftIntervals == intervals)
+                    start(delta);
+
+                sEcs::EntityId entityId;
+                if (leftIntervals == 1) {
+                    entityId = _core->nextEntity(setIteratorId);
+
+                    while (entityId.index != sEcs::INVALID) {
+                        update(entityId, overallDelta);
+                        entityId = _core->nextEntity(setIteratorId);
+                    }
+                } else {
+                    sEcs::uint32 amount =
+                            (_core->getEntityAmount(setIteratorId) - treated) /
+                            leftIntervals;
+
+                    for (sEcs::uint32 i = 0; i < amount; i++) {
+                        entityId = _core->nextEntity(setIteratorId);
+                        if (entityId.index == sEcs::INVALID)
+                            break;
+                        update(entityId, overallDelta);
+                    }
+
+                    treated += amount;
+                }
+
+                deltaSum += delta;
+
+                if (leftIntervals <= 1) {
+                    treated = 0;
+                    leftIntervals = intervals;
+                    overallDelta = deltaSum;
+                    deltaSum = 0;
+                    end(delta);
+                } else
+                    leftIntervals--;
+
+            }
+
+        private:
+            sEcs::uint32 intervals;
+            sEcs::uint32 leftIntervals;
+            sEcs::uint32 treated = 0;
+            DELTA_TYPE deltaSum = 0;
+            double overallDelta;
+
+        };
+
+    }
 
 }
 
