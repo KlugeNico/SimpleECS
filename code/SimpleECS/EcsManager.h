@@ -76,7 +76,7 @@ namespace sEcs {
         }
 
 
-        SystemId addSystem(const std::string& systemName, std::shared_ptr<System> system) {
+        SystemId addSystem(const std::string& systemName, const std::shared_ptr<System>& system) {
             if (getIdByName<ConceptTypes::SYSTEM>(systemName) != 0)
                 throw std::invalid_argument ("System already existing: " + systemName);
 
@@ -90,7 +90,7 @@ namespace sEcs {
         }
 
 
-        SystemId addObject(const std::string& objectName, std::shared_ptr<void> object) {
+        SystemId addObject(const std::string& objectName, const std::shared_ptr<void>& object) {
             if (getIdByName<ConceptTypes::OBJECT>(objectName) != 0)
                 throw std::invalid_argument ("Object already existing: " + objectName);
 

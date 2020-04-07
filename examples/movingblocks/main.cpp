@@ -47,7 +47,6 @@ static bool quit = false;
 
 static SDL_Window* window;
 static SDL_Renderer* renderer;
-static sEcs::RtManager* rtEcs;
 
 static const char FONT_FILE[] = "VeraMono-Bold.ttf";
 static const char SEPARATOR =
@@ -439,8 +438,9 @@ private:
         auto* body = entity.getComponent<Body>();
 
         for (EntityId entityId : position->getPotentiallyNearbyEntities(this)) {
-            auto oPos = getComponent<Position>(entityId);
-            auto oBody = getComponent<Body>(entityId);
+            sEcs::Entity otherEntity(entityId);
+            auto oPos = otherEntity.getComponent<Position>();
+            auto oBody = otherEntity.getComponent<Body>();
 
             if (oPos != nullptr && oBody != nullptr && position != oPos) {
                 double disX = oPos->x() - position->x();
@@ -460,7 +460,7 @@ private:
                     }
 
                     double mul = 1;
-                    if (getComponent<Movement>(entityId) != nullptr)
+                    if (otherEntity.getComponent<Movement>() != nullptr)
                         mul = 0.5;
 
                     position->move(disX * mul, disY * mul);
@@ -507,8 +507,9 @@ public:
             case KI::FOLLOWER:
 
                 for (EntityId entityId : perception->inVision) {
-                    auto* oMov = getComponent<Movement>(entityId);
-                    auto* oPos = getComponent<Position>(entityId);
+                    sEcs::Entity otherEntity(entityId);
+                    auto* oMov = otherEntity.getComponent<Movement>();
+                    auto* oPos = otherEntity.getComponent<Position>();
                     if (oMov != nullptr && oPos != nullptr && oMov->getSpeed2() > movement->getSpeed2()) {
                         movement->accelerate(100, position->directionTo(oPos), delta);
                     }
@@ -562,20 +563,20 @@ void initSdl() {
 
 }
 
-void initRtEcs() {
+void initEcs() {
 
-    rtEcs = new sEcs::RtManager();
+    sEcs::ECS_MANAGER_INSTANCE = new sEcs::EcsManager();
 
-    rtEcs->registerComponent<Player>("player");
-    rtEcs->registerComponent<Position>("position");
-    rtEcs->registerComponent<Body>("body");
-    rtEcs->registerComponent<Perception>("perception");
-    rtEcs->registerComponent<Movement>("movement");
-    rtEcs->registerComponent<KI>("ki");
+    sEcs::registerComponent<Player>();
+    sEcs::registerComponent<Position>();
+    sEcs::registerComponent<Body>();
+    sEcs::registerComponent<Perception>();
+    sEcs::registerComponent<Movement>();
+    sEcs::registerComponent<KI>();
 
     world = new World(WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE);
 
-    sEcs::Entity player = rtEcs->createEntity();
+    sEcs::Entity player = sEcs::createEntity();
 
     player.addComponent(Player());
     player.addComponent(Position(player.id(), WORLD_WIDTH * 64, WORLD_HEIGHT * 64));
@@ -587,13 +588,13 @@ void initRtEcs() {
     RandomNumberGenerator randY(1, world->pixHeight() - 1);
 
     for (int i = 0; i < TREE_SPAWN; i++) {
-        sEcs::Entity tree = rtEcs->createEntity();
+        sEcs::Entity tree = sEcs::createEntity();
         tree.addComponent(Position(tree.id(), randX.get(), randY.get()));
         tree.addComponent(Body(20, 32, 128, 16));
     }
 
     for (int i = 0; i < FOLLOWER_SPAWN; i++) {
-        sEcs::Entity follower = rtEcs->createEntity();
+        sEcs::Entity follower = sEcs::createEntity();
         follower.addComponent(Position(follower.id(), randX.get(), randY.get()));
         follower.addComponent(Body(20, 32, 32, 128));
         follower.addComponent(Perception(FOLLOWER_PERCEPTION));
@@ -601,11 +602,11 @@ void initRtEcs() {
         follower.addComponent(KI(KI::FOLLOWER));
     }
 
-    rtEcs->addSystem(new PlayerSystem(player));
-    rtEcs->addSystem(new PerceptionSystem(10));
-    rtEcs->addSystem(new MoveSystem(1));
-    rtEcs->addSystem(new CollisionSystem(1));
-    rtEcs->addSystem(new KISystem(8));
+    sEcs::addSystem(std::make_shared<PlayerSystem>(player));
+    sEcs::addSystem(std::make_shared<PerceptionSystem>(10));
+    sEcs::addSystem(std::make_shared<MoveSystem>(1));
+    sEcs::addSystem(std::make_shared<CollisionSystem>(1));
+    sEcs::addSystem(std::make_shared<KISystem>(8));
 
 }
 
@@ -637,10 +638,10 @@ int main() {
 
     initSdl();
 
-    initRtEcs();
+    initEcs();
 
     while(!quit) {
-        rtEcs->update(getDelta(SDL_GetTicks()));
+        sEcs::updateEcs(getDelta(SDL_GetTicks()));
     }
 
     closeApp();

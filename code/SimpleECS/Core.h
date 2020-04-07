@@ -44,7 +44,6 @@
 namespace sEcs {
 
     static const uint32 INVALID = 0;
-    static const EntityId ENTITY_NULL;
     static const std::nullptr_t NOT_AVAILABLE = nullptr;
 
 
@@ -567,7 +566,7 @@ namespace sEcs {
 
         EntityId getIdFromIndex(EntityIndex index) {
             if (index > lastEntityIndex)
-                return ENTITY_NULL;
+                return {};
             return {entities[index].version, index};
         }
 

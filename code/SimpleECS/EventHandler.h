@@ -16,7 +16,7 @@
 namespace sEcs {
     namespace Events {
 
-        typedef Id EventId;
+        typedef sEcs::Id EventId;
 
         class Listener {
         public:

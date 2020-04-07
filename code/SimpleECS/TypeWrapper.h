@@ -184,8 +184,16 @@ namespace sEcs {
     };
 
 
+    void initTypeManaging(sEcs::EcsManager& manager) {
+        ECS_MANAGER_INSTANCE = &manager;
+    }
+
     inline sEcs::EcsManager* manager() {
         return ECS_MANAGER_INSTANCE;
+    }
+
+    void updateEcs(double delta) {
+        ECS_MANAGER_INSTANCE->update(delta);
     }
 
 
@@ -200,6 +208,11 @@ namespace sEcs {
     Entity createEntity() {
         return { Entity(ECS_MANAGER_INSTANCE->createEntity() ) };
     }
+
+    void eraseEntity(sEcs::Entity entity) {
+        ECS_MANAGER_INSTANCE->eraseEntity(entity.id());
+    }
+
 
     // This method generates a new list with related entities, if not already existing.
     template<typename ... Ts>
@@ -269,7 +282,6 @@ namespace sEcs {
         void receive(Events::EventId eventId, const void* event) override {
             receive(*(reinterpret_cast <const T *>(event)));
         }
-
     };
 
     template<typename T>
@@ -299,10 +311,6 @@ namespace sEcs {
         }
 
         virtual void update(Entity entity, DELTA_TYPE delta) = 0;
-
-        void update(EntityId entityId, DELTA_TYPE delta) override {
-            update(Entity(entityId), delta);
-        }
 
     };
 
