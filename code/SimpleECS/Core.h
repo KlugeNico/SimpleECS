@@ -8,6 +8,7 @@
  * Author: Nico Kluge <klugenico@mailbox.org>
  */
 
+
 #ifndef SIMPLE_ECS_CORE_H
 #define SIMPLE_ECS_CORE_H
 

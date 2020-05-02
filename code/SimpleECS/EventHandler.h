@@ -8,6 +8,7 @@
  * Author: Nico Kluge <klugenico@mailbox.org>
  */
 
+
 #ifndef SIMPLE_EVENT_HANDLER_H
 #define SIMPLE_EVENT_HANDLER_H
 

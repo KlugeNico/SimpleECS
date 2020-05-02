@@ -1,6 +1,13 @@
-//
-// Created by kreischenderdepp on 05.04.20.
-//
+/*
+ * Copyright (C) 2019 Nico Kluge <klugenico@mailbox.org>
+ * All rights reserved.
+ *
+ * This software is licensed as described in the file LICENSE, which
+ * you should have received as part of this distribution.
+ *
+ * Author: Nico Kluge <klugenico@mailbox.org>
+ */
+
 
 #ifndef SIMPLEECS_SYSTEMS_H
 #define SIMPLEECS_SYSTEMS_H
