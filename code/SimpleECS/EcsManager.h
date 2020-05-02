@@ -15,14 +15,13 @@ namespace sEcs {
     typedef Id SystemId;
 
 
-    enum ConceptTypes {
+    enum ConceptType {
         SYSTEM,
         COMPONENT,
         OBJECT,
         EVENT,
         SIZE_T
     };
-
 
 
     class System {
@@ -48,40 +47,51 @@ namespace sEcs {
         }
 
 
-        template<ConceptTypes C_T>
-        ComponentId getIdByName (const Key& name) {
+        template<ConceptType C_T>
+        Id getIdByName (const Key& name) {
             return conceptRegisters[C_T].getId(name);
         }
 
 
-        Events::EventId generateEvent(const std::string& eventName) {
-            if (getIdByName<ConceptTypes::EVENT>(eventName) != 0)
+        template<ConceptType C_T>
+        Id name (Id id, const Key& name) {
+            if (getIdByName<C_T>(name) != 0)
+                throw std::invalid_argument ("Name already used: " + name);
+
+            conceptRegisters[ConceptType::EVENT].set(name, id);
+
+            return id;
+        }
+
+
+        EventId generateEvent(const std::string& eventName) {
+            if (getIdByName<ConceptType::EVENT>(eventName) != 0)
                 throw std::invalid_argument ("Event already existing: " + eventName);
 
-            Events::EventId eventId = generateEvent();
-            conceptRegisters[ConceptTypes::EVENT].set(eventName, eventId);
+            EventId eventId = generateEvent();
+            conceptRegisters[ConceptType::EVENT].set(eventName, eventId);
 
             return eventId;
         }
 
 
         ComponentId registerComponent(const std::string& componentName, ComponentHandle* ch) {
-            if (getIdByName<ConceptTypes::COMPONENT>(componentName) != 0)
+            if (getIdByName<ConceptType::COMPONENT>(componentName) != 0)
                 throw std::invalid_argument ("Component already existing: " + componentName);
 
             ComponentId componentId = registerComponent(ch);
-            conceptRegisters[ConceptTypes::COMPONENT].set(componentName, componentId);
+            conceptRegisters[ConceptType::COMPONENT].set(componentName, componentId);
 
             return componentId;
         }
 
 
         SystemId addSystem(const std::string& systemName, const std::shared_ptr<System>& system) {
-            if (getIdByName<ConceptTypes::SYSTEM>(systemName) != 0)
+            if (getIdByName<ConceptType::SYSTEM>(systemName) != 0)
                 throw std::invalid_argument ("System already existing: " + systemName);
 
             systems.emplace_back(system);
-            conceptRegisters[ConceptTypes::SYSTEM].set(systemName, systems.size() - 1);
+            conceptRegisters[ConceptType::SYSTEM].set(systemName, systems.size() - 1);
             return systems.size() - 1;
         }
 
@@ -91,11 +101,11 @@ namespace sEcs {
 
 
         SystemId addObject(const std::string& objectName, const std::shared_ptr<void>& object) {
-            if (getIdByName<ConceptTypes::OBJECT>(objectName) != 0)
+            if (getIdByName<ConceptType::OBJECT>(objectName) != 0)
                 throw std::invalid_argument ("Object already existing: " + objectName);
 
             objects.emplace_back(object);
-            conceptRegisters[ConceptTypes::OBJECT].set(objectName, objects.size() - 1);
+            conceptRegisters[ConceptType::OBJECT].set(objectName, objects.size() - 1);
             return objects.size() - 1;
         }
 
@@ -114,7 +124,7 @@ namespace sEcs {
     private:
         std::vector<std::shared_ptr<System>> systems;
         std::vector<std::shared_ptr<void>> objects;
-        sEcs::Register conceptRegisters[ConceptTypes::SIZE_T];
+        sEcs::Register conceptRegisters[ConceptType::SIZE_T];
 
     };
 

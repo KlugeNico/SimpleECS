@@ -1,5 +1,3 @@
-#include <SimpleECS/Core.h>
-#include "gtest/gtest.h"
 
 using std::cout;
 using std::endl;
@@ -9,10 +7,6 @@ using namespace sEcs;
 using namespace Core_Intern;
 
 const size_t MAX_COMPONENTS = 300;
-
-struct Numbered {
-    int id;
-};
 
 
 TEST (BitsetTest, TestSetBitset) {

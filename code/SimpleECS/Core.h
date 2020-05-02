@@ -260,8 +260,8 @@ namespace sEcs {
 
 #if USE_ECS_EVENTS == 1
     struct ComponentEventInfo {
-        sEcs::uint32 addEventId = 0;
-        sEcs::uint32 deleteEventId = 0;
+        EventId addEventId = 0;
+        EventId deleteEventId = 0;
     };
 #endif
 
@@ -271,6 +271,7 @@ namespace sEcs {
     public:
         virtual ~ComponentHandle() = default;
 
+        // only defined behavior for valid requests (entity and component exists)
         void destroyComponent(sEcs::EntityId entityId, sEcs::EntityIndex entityIndex) {
             destroyComponentIntern(entityIndex);
         }
@@ -284,11 +285,11 @@ namespace sEcs {
 #if USE_ECS_EVENTS == 1
 
         ComponentEventInfo& getComponentEventInfo() {
-            return componentInfo;
+            return componentEventInfo;
         }
 
     protected:
-        ComponentEventInfo componentInfo;
+        ComponentEventInfo componentEventInfo;
 #endif
 
     private:
@@ -310,8 +311,8 @@ namespace sEcs {
             componentHandles.push_back(nullptr);
             entities[0] = Core_Intern::EntityState();
 #if USE_ECS_EVENTS==1
-            entityCreatedEventId = generateEvent();
-            entityErasedEventId = generateEvent();
+            entityCreatedEventId_ = generateEvent();
+            entityErasedEventId_ = generateEvent();
 #endif
         }
 
@@ -339,7 +340,7 @@ namespace sEcs {
 
 #if USE_ECS_EVENTS==1
             auto event = Events::EntityCreatedEvent(entityId);
-            emitEvent(entityCreatedEventId, &event);
+            emitEvent(entityCreatedEventId_, &event);
 #endif
 
             return entityId;
@@ -358,7 +359,7 @@ namespace sEcs {
 
 #if USE_ECS_EVENTS==1
             auto eventErased = Events::EntityErasedEvent(entityId);
-            emitEvent(entityErasedEventId, &eventErased);
+            emitEvent(entityErasedEventId_, &eventErased);
 #endif
 
             Core_Intern::ComponentBitset originally = *entities[index].getComponentMask();
@@ -509,6 +510,29 @@ namespace sEcs {
         }
 
 
+#if USE_ECS_EVENTS == 1
+
+        EventId componentDeletedEventId(ComponentId componentId) {
+            auto* ch = componentHandles[componentId];
+            return ch->getComponentEventInfo().deleteEventId;
+        }
+
+        EventId componentAddedEventId(ComponentId componentId) {
+            auto* ch = componentHandles[componentId];
+            return ch->getComponentEventInfo().addEventId;
+        }
+
+        EventId entityCreatedEventId() {
+            return entityCreatedEventId_;
+        }
+
+        EventId entityErasedEventId() {
+            return entityErasedEventId_;
+        }
+
+#endif
+
+
         SetIteratorId createSetIterator(std::vector<ComponentId> componentIds) {
 
             std::sort(componentIds.begin(), componentIds.end());
@@ -575,8 +599,8 @@ namespace sEcs {
         EntityIndex lastEntityIndex = 0;
 
 #if USE_ECS_EVENTS == 1
-        uint32 entityCreatedEventId = generateEvent();
-        uint32 entityErasedEventId = generateEvent();
+        uint32 entityCreatedEventId_;
+        uint32 entityErasedEventId_;
 #endif
 
         std::vector<Core_Intern::EntityState> entities;

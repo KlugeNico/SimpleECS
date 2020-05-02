@@ -28,8 +28,6 @@ namespace sEcs {
     using sEcs::NOT_AVAILABLE;
 
 #if USE_ECS_EVENTS==1
-    using sEcs::Events::ComponentAddedEvent;
-    using sEcs::Events::ComponentDeletedEvent;
     using sEcs::Events::EntityCreatedEvent;
     using sEcs::Events::EntityErasedEvent;
 #endif
@@ -55,7 +53,7 @@ namespace sEcs {
         }
 
 
-        template<ConceptTypes ID_T, typename T>
+        template<ConceptType ID_T, typename T>
         sEcs::Id getSetId(sEcs::Id id = 0) {
             static sEcs::Id _id = id;
 
@@ -105,6 +103,23 @@ namespace sEcs {
         }
 
     }
+
+
+#if USE_ECS_EVENTS==1
+    template<typename T>
+    struct ComponentAddedEvent {
+        explicit ComponentAddedEvent(const EntityId& entityId) : entityId(entityId) {}
+
+        EntityId entityId;
+    };
+
+    template<typename T>
+    struct ComponentDeletedEvent {
+        explicit ComponentDeletedEvent(const EntityId& entityId) : entityId(entityId) {}
+
+        EntityId entityId;
+    };
+#endif
 
 
     class Entity {
@@ -183,13 +198,19 @@ namespace sEcs {
 
     };
 
-
-    void initTypeManaging(sEcs::EcsManager& manager) {
-        ECS_MANAGER_INSTANCE = &manager;
-    }
-
     inline sEcs::EcsManager* manager() {
         return ECS_MANAGER_INSTANCE;
+    }
+
+    void initTypeManaging(sEcs::EcsManager& managerInstance) {
+        ECS_MANAGER_INSTANCE = &managerInstance;
+
+#if USE_ECS_EVENTS==1
+        manager()->name<ConceptType::EVENT>(
+                manager()->entityCreatedEventId(), TypeWrapper_Intern::className<EntityCreatedEvent>());
+        manager()->name<ConceptType::EVENT>(
+                manager()->entityErasedEventId(), TypeWrapper_Intern::className<EntityErasedEvent>());
+#endif
     }
 
     void updateEcs(double delta) {
@@ -259,18 +280,26 @@ namespace sEcs {
     template<typename T>
     void registerComponent(Storing storing = Storing::VALUE) {
         Key key = TypeWrapper_Intern::className<T>();
-        sEcs::ComponentId id = 0;
+        sEcs::ComponentId compId = 0;
         switch (storing) {
             case POINTER:
-                id = manager()->registerComponent(key, new PointingComponentHandle( sizeof(T),
-                    [](void *p) { delete reinterpret_cast<T *>(p); }));
+                compId = manager()->registerComponent(key,
+                        new PointingComponentHandle(sizeof(T), [](void *p) { delete reinterpret_cast<T *>(p); }));
                 break;
             case VALUE:
-                id = manager()->registerComponent(key, new ValuedComponentHandle( sizeof(T),
-                    [](void *p) { reinterpret_cast<T *>(p)->~T(); }));
+                compId = manager()->registerComponent(key,
+                        new ValuedComponentHandle(sizeof(T), [](void *p) { reinterpret_cast<T *>(p)->~T(); }));
                 break;
         }
-        TypeWrapper_Intern::getSetId<COMPONENT, T>(id);
+        TypeWrapper_Intern::getSetId<COMPONENT, T>(compId);
+
+#if USE_ECS_EVENTS==1
+        manager()->name<ConceptType::EVENT>(
+                manager()->componentAddedEventId(compId), TypeWrapper_Intern::className<ComponentAddedEvent<T>>());
+        manager()->name<ConceptType::EVENT>(
+                manager()->componentDeletedEventId(compId), TypeWrapper_Intern::className<ComponentDeletedEvent<T>>());
+#endif
+
     }
 
 
@@ -279,7 +308,7 @@ namespace sEcs {
     public:
         virtual void receive(const T& event) = 0;
 
-        void receive(Events::EventId eventId, const void* event) override {
+        void receive(EventId eventId, const void* event) override {
             receive(*(reinterpret_cast <const T *>(event)));
         }
     };

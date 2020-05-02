@@ -16,6 +16,7 @@ namespace sEcs {
     typedef uint32 EntityIndex;
     typedef Id ComponentId;
     typedef Id SetIteratorId;
+    typedef Id EventId;
     typedef uint32 InternIndex;
     typedef std::string Key;
 

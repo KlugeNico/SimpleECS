@@ -16,8 +16,6 @@
 namespace sEcs {
     namespace Events {
 
-        typedef sEcs::Id EventId;
-
         class Listener {
         public:
             virtual void receive(EventId, const void* event) = 0;
@@ -27,6 +25,10 @@ namespace sEcs {
         class EventHandler {
 
         public:
+            EventHandler() {
+                listeners.emplace_back();
+            }
+
             EventId generateEvent() {
                 listeners.emplace_back();
                 return listeners.size() - 1;

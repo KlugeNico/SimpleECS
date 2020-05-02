@@ -44,7 +44,5 @@ add_executable(benchmark_test test/Benchmarks_test.cc)
 target_link_libraries(benchmark_test gtest gtest_main ${PROJECT_NAME})
 
 add_executable(functionality_test
-        test/functionality/BitsetTest.cc
-        test/functionality/CoreTest.cc
-        test/functionality/RtEcsEventHandelerTest.cc)
+        test/functionality/Functionality_Tests.cc)
 target_link_libraries(functionality_test gtest gtest_main ${PROJECT_NAME})

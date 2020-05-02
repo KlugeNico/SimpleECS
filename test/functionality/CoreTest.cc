@@ -1,7 +1,3 @@
-#include <thread>
-#include <SimpleECS/Core.h>
-#include <SimpleECS/TypeWrapper.h>
-#include "gtest/gtest.h"
 
 using std::cout;
 using std::endl;
@@ -12,9 +8,6 @@ using namespace sEcs;
 uint32 MAX_ENTITIES_RT = 5000;
 const size_t COMPONENT_AMOUNT = 50;
 
-struct Numbered {
-    int id;
-};
 
 struct Position {
     int x = 0;
@@ -99,7 +92,7 @@ TEST (ManagerTest, TestManagerCreate) {
     while (core.nextEntity(s1).index != INVALID) {
         amount++;
     }
-    ASSERT_EQ(amount, 7);
+    ASSERT_EQ(amount, 17);
 
     SetIteratorId s3 = core.createSetIterator(s2_c);
 

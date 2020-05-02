@@ -1,6 +1,3 @@
-#include <thread>
-#include <SimpleECS/TypeWrapper.h>
-#include "gtest/gtest.h"
 
 using std::cout;
 using std::endl;
@@ -72,43 +69,44 @@ TEST (RtManagerTest, TestRtManagerEventHandler) {
     cout << "Create RtManager" << endl;
 
     EcsManager manager;
+    initTypeManaging(manager);
 
     cout << "register Events" << endl;
 
     cout << "add Listener" << endl;
 
     SomeReceiver receiver;
-    manager.subscribeEvent<SomeEvent>(&receiver);
-    manager.subscribeEvent<SomeOtherEvent>(&receiver);
+    subscribeEvent<SomeEvent>(&receiver);
+    subscribeEvent<SomeOtherEvent>(&receiver);
 
-    manager.registerComponent<SomeComponent>("comp");
+    registerComponent<SomeComponent>();
 
-    manager.subscribeEvent<sEcs::ComponentAddedEvent<SomeComponent>>(&receiver);
-    manager.subscribeEvent<sEcs::ComponentDeletedEvent<SomeComponent>>(&receiver);
-    manager.subscribeEvent<sEcs::EntityCreatedEvent>(&receiver);
-    manager.subscribeEvent<sEcs::EntityErasedEvent>(&receiver);
+    subscribeEvent<sEcs::ComponentAddedEvent<SomeComponent>>(&receiver);
+    subscribeEvent<sEcs::ComponentDeletedEvent<SomeComponent>>(&receiver);
+    subscribeEvent<sEcs::EntityCreatedEvent>(&receiver);
+    subscribeEvent<sEcs::EntityErasedEvent>(&receiver);
 
     ASSERT_EQ(receiver.someEventReceived, 0);
 
     SomeEvent someEvent = SomeEvent();
-    manager.emitEvent(someEvent);
+    emitEvent(someEvent);
 
     SomeOtherEvent someOtherEvent = SomeOtherEvent();
-    manager.emitEvent(someOtherEvent);
+    emitEvent(someOtherEvent);
 
     WrongEvent wrongEvent = WrongEvent();
-    manager.emitEvent(wrongEvent);
+    emitEvent(wrongEvent);
 
     ASSERT_EQ(receiver.someEventReceived, 1);
     ASSERT_EQ(receiver.someOtherEventReceived, 1);
 
-    manager.unsubscribeEvent<SomeEvent>(&receiver);
-    manager.emitEvent(someEvent);
+    unsubscribeEvent<SomeEvent>(&receiver);
+    emitEvent(someEvent);
 
     ASSERT_EQ(receiver.someEventReceived, 1);
 
     ASSERT_EQ(receiver.entityCreated, 0);
-    Entity entity = manager.createEntity();
+    Entity entity = (Entity) manager.createEntity();
     ASSERT_EQ(receiver.entityCreated, 1);
 
     entity.addComponent(SomeComponent());
