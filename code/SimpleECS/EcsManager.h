@@ -20,16 +20,19 @@ namespace sEcs {
     typedef float DELTA_TYPE;
     typedef Id ObjectId;
     typedef Id SystemId;
+    typedef Id PointerId;
 
 
-    enum ConceptType {
-        SYSTEM,
-        COMPONENT,
-        OBJECT,
-        EVENT,
-        SIZE_T
-    };
-
+    namespace ConceptType {
+        enum Type {
+            SYSTEM,
+            COMPONENT,
+            OBJECT,
+            POINTER,
+            EVENT,
+            SIZE_T
+        };
+    }
 
     class System {
 
@@ -54,13 +57,13 @@ namespace sEcs {
         }
 
 
-        template<ConceptType C_T>
+        template<ConceptType::Type C_T>
         Id getIdByName (const Key& name) {
             return conceptRegisters[C_T].getId(name);
         }
 
 
-        template<ConceptType C_T>
+        template<ConceptType::Type C_T>
         Id name (Id id, const Key& name) {
             if (getIdByName<C_T>(name) != 0)
                 throw std::invalid_argument ("Name already used: " + name);
@@ -121,6 +124,20 @@ namespace sEcs {
         }
 
 
+        PointerId addPointer(const std::string& pointerName, void* pointer) {
+            if (getIdByName<ConceptType::POINTER>(pointerName) != 0)
+                throw std::invalid_argument ("Pointer already existing: " + pointerName);
+
+            pointers.emplace_back(pointer);
+            conceptRegisters[ConceptType::POINTER].set(pointerName, pointers.size() - 1);
+            return pointers.size() - 1;
+        }
+
+        inline void* getPointer(PointerId pointerId) {
+            return pointers[pointerId];
+        }
+
+
         void update(DELTA_TYPE delta) {
             for (uint32 i = 1; i < systems.size(); i++) {
                 systems[i]->update(delta);
@@ -131,7 +148,8 @@ namespace sEcs {
     private:
         std::vector<std::shared_ptr<System>> systems;
         std::vector<std::shared_ptr<void>> objects;
-        sEcs::Register conceptRegisters[ConceptType::SIZE_T];
+        std::vector<void*> pointers;
+        sEcs::Register conceptRegisters[static_cast<int>(ConceptType::SIZE_T)];
 
     };
 
