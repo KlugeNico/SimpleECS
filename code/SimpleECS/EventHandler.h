@@ -12,6 +12,7 @@
 #ifndef SIMPLE_EVENT_HANDLER_H
 #define SIMPLE_EVENT_HANDLER_H
 
+#include <vector>
 #include "Typedef.h"
 
 namespace sEcs {
@@ -22,34 +23,18 @@ namespace sEcs {
             virtual void receive(EventId, const void* event) = 0;
         };
 
-
         class EventHandler {
 
         public:
-            EventHandler() {
-                listeners.emplace_back();
-            }
+            EventHandler();
 
-            EventId generateEvent() {
-                listeners.emplace_back();
-                return listeners.size() - 1;
-            }
+            EventId generateEvent();
 
-            void subscribeEvent(uint32_t eventId, Listener* listener) {
-                listeners[eventId].push_back(listener);
-            }
+            void subscribeEvent(uint32_t eventId, Listener* listener);
 
-            void unsubscribeEvent(uint32_t eventId, Listener* toRemove) {
-                std::vector<Listener*>& v = listeners[eventId];
-                v.erase(std::remove(v.begin(), v.end(), toRemove), v.end());
-            }
+            void unsubscribeEvent(uint32_t eventId, Listener* toRemove);
 
-            void emitEvent(uint32_t eventId, const void* event) {
-                std::vector<Listener*>& eventListeners = listeners[eventId];
-                for (Listener* listener : eventListeners) {
-                    listener->receive(eventId, event);
-                }
-            }
+            void emitEvent(uint32_t eventId, const void* event);
 
         private:
             std::vector<std::vector<Listener*>> listeners;

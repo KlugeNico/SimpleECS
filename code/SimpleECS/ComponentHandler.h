@@ -21,35 +21,19 @@ namespace sEcs {
     class PointingComponentHandle : public sEcs::ComponentHandle {
 
     public:
-        explicit PointingComponentHandle(size_t typeSize, void(* deleteFunc)(void*)) :
-                deleteFunc(deleteFunc), typeSize(typeSize),
-                components(std::vector<void*>(MAX_ENTITY_AMOUNT + 1)) {}
+        explicit PointingComponentHandle(size_t typeSize, void(* deleteFunc)(void*));
 
-        ~PointingComponentHandle() override {
-            for (auto& component : components) {
-                deleteFunc(component);
-                component = nullptr;
-            }
-        }
+        ~PointingComponentHandle() override;
 
-        void* getComponent(sEcs::EntityIndex entityIndex) override {
-            return components[entityIndex];
-        }
+        void* getComponent(sEcs::EntityIndex entityIndex) override;
 
-        void* createComponent(sEcs::EntityIndex entityIndex) override {
-            return components[entityIndex] = malloc(typeSize);
-        }
+        void* createComponent(sEcs::EntityIndex entityIndex) override;
 
-        void destroyComponentIntern(sEcs::EntityIndex entityIndex) override {
-            deleteFunc(getComponent(entityIndex));
-            components[entityIndex] = nullptr;
-        }
+        void destroyComponentIntern(sEcs::EntityIndex entityIndex) override;
 
     private:
         size_t typeSize;
-
         void (* deleteFunc)(void*);
-
         std::vector<void*> components;
 
     };
@@ -58,28 +42,17 @@ namespace sEcs {
     class ValuedComponentHandle : public sEcs::ComponentHandle {
 
     public:
-        explicit ValuedComponentHandle(size_t typeSize, void(* destroyFunc)(void*)) :
-                destroyFunc(destroyFunc), typeSize(typeSize) {
-            data = std::vector<char>((MAX_ENTITY_AMOUNT + 1) * typeSize);
-        }
+        explicit ValuedComponentHandle(size_t typeSize, void(* destroyFunc)(void*));
 
-        void* getComponent(sEcs::EntityIndex entityIndex) override {
-            return &data[entityIndex * typeSize];
-        }
+        void* getComponent(sEcs::EntityIndex entityIndex) override;
 
-        void* createComponent(sEcs::EntityIndex entityIndex) override {
-            return &data[entityIndex * typeSize];
-        }
+        void* createComponent(sEcs::EntityIndex entityIndex) override;
 
-        void destroyComponentIntern(sEcs::EntityIndex entityIndex) override {
-            destroyFunc(getComponent(entityIndex));
-        }
+        void destroyComponentIntern(sEcs::EntityIndex entityIndex) override;
 
     private:
         size_t typeSize;
-
         void (* destroyFunc)(void*);
-
         std::vector<char> data;
 
     };

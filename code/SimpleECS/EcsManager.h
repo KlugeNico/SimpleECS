@@ -12,7 +12,9 @@
 #ifndef SIMPLEECS_ECSMANAGER_H
 #define SIMPLEECS_ECSMANAGER_H
 
+#include <memory>
 #include "Core.h"
+#include "Register.h"
 
 
 namespace sEcs {
@@ -51,11 +53,7 @@ namespace sEcs {
     public:
         EcsManager(const EcsManager&) = delete;
 
-        EcsManager() {
-            systems.emplace_back(nullptr);
-            objects.emplace_back(nullptr);
-            pointers.emplace_back(nullptr);
-        }
+        EcsManager();
 
 
         template<ConceptType::Type C_T>
@@ -75,75 +73,34 @@ namespace sEcs {
         }
 
 
-        EventId generateEvent(const std::string& eventName) {
-            if (getIdByName<ConceptType::EVENT>(eventName) != 0)
-                throw std::invalid_argument ("Event already existing: " + eventName);
-
-            EventId eventId = generateEvent();
-            conceptRegisters[ConceptType::EVENT].set(eventName, eventId);
-
-            return eventId;
-        }
+        EventId generateEvent(const std::string& eventName);
 
 
-        ComponentId registerComponent(const std::string& componentName, ComponentHandle* ch) {
-            if (getIdByName<ConceptType::COMPONENT>(componentName) != 0)
-                throw std::invalid_argument ("Component already existing: " + componentName);
-
-            ComponentId componentId = registerComponent(ch);
-            conceptRegisters[ConceptType::COMPONENT].set(componentName, componentId);
-
-            return componentId;
-        }
+        ComponentId registerComponent(const std::string& componentName, ComponentHandle* ch);
 
 
-        SystemId addSystem(const std::string& systemName, const std::shared_ptr<System>& system) {
-            if (getIdByName<ConceptType::SYSTEM>(systemName) != 0)
-                throw std::invalid_argument ("System already existing: " + systemName);
-
-            systems.emplace_back(system);
-            conceptRegisters[ConceptType::SYSTEM].set(systemName, systems.size() - 1);
-            return systems.size() - 1;
-        }
+        SystemId addSystem(const std::string& systemName, const std::shared_ptr<System>& system);
 
         inline std::shared_ptr<void> getSystem(SystemId systemId) {
             return systems[systemId];
         }
 
 
-        SystemId addObject(const std::string& objectName, const std::shared_ptr<void>& object) {
-            if (getIdByName<ConceptType::OBJECT>(objectName) != 0)
-                throw std::invalid_argument ("Object already existing: " + objectName);
-
-            objects.emplace_back(object);
-            conceptRegisters[ConceptType::OBJECT].set(objectName, objects.size() - 1);
-            return objects.size() - 1;
-        }
+        SystemId addObject(const std::string& objectName, const std::shared_ptr<void>& object);
 
         inline std::shared_ptr<void> getObject(ObjectId objectId) {
             return objects[objectId];
         }
 
 
-        PointerId addPointer(const std::string& pointerName, void* pointer) {
-            if (getIdByName<ConceptType::POINTER>(pointerName) != 0)
-                throw std::invalid_argument ("Pointer already existing: " + pointerName);
-
-            pointers.emplace_back(pointer);
-            conceptRegisters[ConceptType::POINTER].set(pointerName, pointers.size() - 1);
-            return pointers.size() - 1;
-        }
+        PointerId addPointer(const std::string& pointerName, void* pointer);
 
         inline void* getPointer(PointerId pointerId) {
             return pointers[pointerId];
         }
 
 
-        void update(DELTA_TYPE delta) {
-            for (uint32 i = 1; i < systems.size(); i++) {
-                systems[i]->update(delta);
-            }
-        }
+        void update(DELTA_TYPE delta);
 
 
     private:

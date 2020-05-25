@@ -9,6 +9,7 @@
  */
 
 
+#include <cxxabi.h>
 #include "../TypeWrapper.h"
 
 sEcs::EcsManager* sEcs::ECS_MANAGER_INSTANCE;

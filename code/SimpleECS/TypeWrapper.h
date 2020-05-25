@@ -14,6 +14,7 @@
 
 #include <type_traits>
 #include <memory>
+#include <sstream>
 
 #include "Core.h"
 #include "EventHandler.h"

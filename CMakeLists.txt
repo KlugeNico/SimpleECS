@@ -10,7 +10,7 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/)
 project(SimpleECS)
 
 file( GLOB_RECURSE sEcs_SOURCE "code/*.cpp" )
-add_library( ${PROJECT_NAME} STATIC "code/SimpleECS/src/TypeWrapper.cpp" )
+add_library( ${PROJECT_NAME} STATIC ${sEcs_SOURCE} )
 target_include_directories( ${PROJECT_NAME} PUBLIC code )
 
 if (NOT TARGET gtest)
