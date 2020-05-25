@@ -9,8 +9,9 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/)
 
 project(SimpleECS)
 
-add_library(${PROJECT_NAME} INTERFACE)
-target_include_directories(${PROJECT_NAME} INTERFACE code)
+file( GLOB_RECURSE sEcs_SOURCE "code/*.cpp" )
+add_library( ${PROJECT_NAME} STATIC "code/SimpleECS/src/TypeWrapper.cpp" )
+target_include_directories( ${PROJECT_NAME} PUBLIC code )
 
 if (NOT TARGET gtest)
     add_subdirectory(libs/googletest)

@@ -54,6 +54,7 @@ namespace sEcs {
         EcsManager() {
             systems.emplace_back(nullptr);
             objects.emplace_back(nullptr);
+            pointers.emplace_back(nullptr);
         }
 
 
@@ -67,8 +68,8 @@ namespace sEcs {
         Id name (Id id, const Key& name) {
             if (getIdByName<C_T>(name) != 0)
                 throw std::invalid_argument ("Name already used: " + name);
-
-            conceptRegisters[ConceptType::EVENT].set(name, id);
+            else
+                conceptRegisters[ConceptType::EVENT].set(name, id);
 
             return id;
         }
